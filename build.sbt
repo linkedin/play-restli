@@ -1,5 +1,4 @@
-import com.linkedin.sbt._
-import restli.All._
+val pegasusVersion = "24.0.+"
 
 lazy val playRestli = (project in file("play-restli"))
   .settings(
@@ -12,7 +11,7 @@ lazy val playRestli = (project in file("play-restli"))
       "restli-server",
       "restli-docgen",
       "restli-server-extras"
-    ).map("com.linkedin.pegasus" % _ % "24.0.+"),
+    ).map("com.linkedin.pegasus" % _ % pegasusVersion),
     libraryDependencies ++= Seq(
       "com.google.inject" % "guice" % "4.2.+",
       "com.typesafe.akka" %% "akka-stream" % "2.5.+",
@@ -26,50 +25,30 @@ lazy val playRestli = (project in file("play-restli"))
     )
   )
 
-val restliVersion = "24.0.+"
-
-/**
-  * This project is for hand written *.pdsc files.  It will generate "data template" class bindings into the
-  * target/classes directory.
-  */
-lazy val dataTemplate = (project in file("example/data-template"))
-  .compilePegasus()
-  .settings(libraryDependencies += "com.linkedin.pegasus" % "data" % restliVersion)
-  .settings(name := "data-template")
-
-
-/**
-  * This project contains your handwritten Rest.li "resource" implementations.  See rest.li documentation for detail
-  * on how to write resource classes.
-  */
-lazy val server = (project in file("example/server"))
-  .enablePlugins(PlayJava)
-  .dependsOn(playRestli, dataTemplate)
-  .aggregate(dataTemplate, api)
-  .settings(name := "server")
-  .settings(libraryDependencies += "com.linkedin.pegasus" % "restli-server" % restliVersion)
-  .settings(libraryDependencies += guice)
-  .compileRestspec(
-    apiName = "fortune",
-    apiProject = api,
-    resourcePackages = List("com.example.fortune"),
-    dataTemplateProject = dataTemplate,
-    compatMode = "ignore"
+lazy val api = (project in file("example/api"))
+  .enablePlugins(RestliSchemaPlugin)
+  .settings(
+    name := "example-play-api",
+    organization := "com.linkedin.pegasus",
+    version := "0.1.0",
+    libraryDependencies ++= Seq(
+      "com.linkedin.pegasus" % "data" % pegasusVersion,
+      "com.google.code.findbugs" % "jsr305" % "3.0.0"
+    )
   )
 
-
-/**
-  * This project contains your API contract and will generate "client binding" classes into the
-  * target/classes directory.  Clients to your rest.li service should depend on this project
-  * or it's published artifacts (depend on the "restClient" configuration).
-  *
-  * Files under the src/idl and src/snapshot directories must be checked in to source control.  They are the
-  * API contract and are used to generate client bindings and perform compatibility checking.
-  */
-lazy val api = (project in file("example/api"))
-  .dependsOn(dataTemplate)
-  .settings(name := "api")
-  .settings(libraryDependencies += "com.linkedin.pegasus" % "restli-client" % restliVersion)
-  .generateRequestBuilders(
-    dataTemplateProject = dataTemplate
+lazy val server = (project in file("example/server"))
+  .enablePlugins(RestliModelPlugin, PlayService)
+  .dependsOn(api, playRestli)
+  .settings(
+    restliModelApi := api,
+    name := "example-play-server",
+    organization := "com.linkedin.pegasus",
+    version := "0.1.0",
+    libraryDependencies ++= Seq(
+      "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
+      guice,
+      akkaHttpServer,
+      logback
+    )
   )

@@ -1,14 +1,14 @@
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
 import com.linkedin.restli.server.RestLiConfig;
 
 public class Module extends AbstractModule {
-  @Provides
-  RestLiConfig restLiConfigProvider() {
+  @Override
+  protected void configure() {
     RestLiConfig config = new RestLiConfig();
     config.addResourcePackageNames(
         "com.example.fortune"
     );
-    return config;
+
+    bind(RestLiConfig.class).toInstance(config);
   }
 }
