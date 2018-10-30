@@ -4,45 +4,28 @@ import java.io.File
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicReference
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import akka.stream.javadsl.Source
 import akka.stream.scaladsl.Sink
 import akka.util.ByteString
-import com.linkedin.r2.message.stream.entitystream.EntityStreams
-import com.linkedin.r2.message.stream.entitystream.WriteHandle
-import com.linkedin.r2.message.stream.entitystream.Writer
-import play.api.Configuration
-import play.api.Environment
+import com.linkedin.r2.message.stream.entitystream.{EntityStreams, WriteHandle, Writer}
+import javax.inject.{Inject, Singleton}
+import play.api.{Configuration, Environment}
 import play.api.http._
 import play.api.libs.streams.Accumulator
-import play.api.mvc.Action
-import play.api.mvc.Cookie
-import play.api.mvc.Cookies
-import play.api.mvc.EssentialAction
-import play.api.mvc.Handler
-import play.api.mvc.PlayBodyParsers
-import play.api.mvc.Request
-import play.api.mvc.RequestHeader
-import play.api.mvc.Result
-import play.api.mvc.Results
+import play.api.mvc._
 import play.api.routing.Router
 import play.core.j.JavaHandlerComponents
 import play.core.j.JavaHelpers._
-import play.mvc.Http.RawBuffer
-import play.mvc.Http.RequestBody
+import play.mvc.Http.{RawBuffer, RequestBody}
 import play.utils.Threads
 
 import scala.collection.JavaConverters._
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.Promise
+import scala.concurrent.{ExecutionContext, Future, Promise}
 
-/**
- * Created by rli on 2/16/16.
- *
- * Overrides Play's default routing behavior and let rest.li handle the request
- */
+/** Created by rli on 2/16/16.
+  *
+  * Overrides Play's default routing behavior and let rest.li handle the request
+  */
 @Singleton
 class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
                                                 env: Environment,
@@ -53,16 +36,18 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
                                                 httpConfig: HttpConfiguration,
                                                 httpFilters: HttpFilters,
                                                 components: JavaHandlerComponents,
-                                                playBodyParsers: PlayBodyParsers)
+                                                playBodyParsers: PlayBodyParsers,
+                                                actionBuilder: DefaultActionBuilder
+                                               )(implicit ec: ExecutionContext)
   extends JavaCompatibleHttpRequestHandler(router, errorHandler, httpConfig, httpFilters, components) {
 
-  private[server] val memoryThresholdBytes: Int = configuration.getInt("restli.memoryThresholdBytes").getOrElse(Int.MaxValue)
+  private[server] val memoryThresholdBytes: Int = configuration.getOptional[Int]("restli.memoryThresholdBytes").getOrElse(Int.MaxValue)
   private[server] val SupportedRestliMethods = Set("GET", "POST", "PUT", "PATCH", "HEAD", "DELETE", "OPTIONS")
-  private[server] val useStream: Boolean = configuration.getBoolean("restli.useStream").getOrElse(false)
+  private[server] val useStream: Boolean = configuration.getOptional[Boolean]("restli.useStream").getOrElse(false)
 
 
-  private def restliRequestHandler(implicit executionContext: ExecutionContext): Handler = {
-    Action.async(playBodyParsers.byteString(memoryThresholdBytes)) { scalaRequest =>
+  private def restliRequestHandler: Handler = {
+    actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes)) { scalaRequest =>
       val javaContext = createJavaContext(scalaRequest.map(data => new RequestBody(new RawBuffer {
         override def size(): java.lang.Long = data.size.toLong
 
@@ -79,14 +64,15 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
     }
   }
 
-  private def restliStreamRequestHandler(implicit executionContext: ExecutionContext): Handler = new EssentialAction {
+  private def restliStreamRequestHandler: Handler = new EssentialAction {
     override def apply(requestHeader: RequestHeader): Accumulator[ByteString, Result] = {
       trait EntityStreamWriter extends Writer {
         def write(bytes: ByteString): Future[EntityStreamWriter]
-        def done: Unit
+        def done(): Unit
+        def error(ex: Throwable): Unit
       }
 
-      val writer = new EntityStreamWriter {
+      val writer: EntityStreamWriter = new EntityStreamWriter {
         val abortException = new AtomicReference[Throwable]()
         var writeHandle: Option[WriteHandle] = None
         val queue = new ConcurrentLinkedQueue[(Promise[EntityStreamWriter], ByteString)]()
@@ -98,7 +84,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
             queue.poll() match {
               case null =>
                 return
-              case (promise, data) =>
+              case (promise, _) =>
                 promise.failure(e)
             }
           }
@@ -124,7 +110,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
           }
         }
 
-        def write(bytes: ByteString) = {
+        override def write(bytes: ByteString): Future[EntityStreamWriter] = {
           if (abortException.get() != null) {
             // Already aborted
             Future.failed(abortException.get())
@@ -137,13 +123,13 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
           }
         }
 
-        def done = {
+        override def done(): Unit = {
           Threads.withContextClassLoader(env.classLoader) {
             writeHandle.foreach(_.done())
           }
         }
 
-        def error(ex: Throwable) = {
+        override def error(ex: Throwable): Unit = {
           Threads.withContextClassLoader(env.classLoader) {
             writeHandle.foreach(_.error(ex))
           }
@@ -152,7 +138,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
 
       val sink = Sink.foldAsync[EntityStreamWriter, ByteString](writer)((thisWriter, bytes) => {
         thisWriter.write(bytes)
-      }).mapMaterializedValue(_.map(_.done).recover {
+      }).mapMaterializedValue(_.map(_.done()).recover {
         case ex: Throwable => writer.error(ex)
       })
 
@@ -166,7 +152,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
     }
   }
 
-  private def buildResult[T](callback: BaseRestliTransportCallback[_, _ <: BaseGenericResponse[T], T], addBody: (Results.Status, T) => Result)(implicit executionContext: ExecutionContext) = {
+  private def buildResult[T](callback: BaseRestliTransportCallback[_, _ <: BaseGenericResponse[T], T], addBody: (Results.Status, T) => Result) = {
     callback.getPromise.future.map { response =>
       // Ensure that we *only* include headers from the RestResponse and not any that the Play Status object may add by default
       val result = addBody(Results.Status(response.getStatus), response.getBody)
@@ -182,17 +168,11 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
     }
   }
 
-  /**
-   * Overrides the default play routing behavior. It first looks for a route that could handle this request.
-   * If such a route is not found, then handle the request as a restli request.
-   *
-   * @param rh
-   * @return
-   */
+  /** Overrides the default play routing behavior. It first looks for a route that could handle this request.
+    * If such a route is not found, then handle the request as a restli request.
+    */
   override def routeRequest(rh: RequestHeader): Option[Handler] = {
     super.routeRequest(rh).orElse {
-      import play.api.libs.concurrent.Execution.Implicits._
-
       if (SupportedRestliMethods.contains(rh.method)) {
         if (useStream) {
           Some(restliStreamRequestHandler)

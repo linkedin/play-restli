@@ -6,7 +6,6 @@ import com.linkedin.r2.message.rest.RestRequestBuilder;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import play.Configuration;
 import play.mvc.Http;
 
 

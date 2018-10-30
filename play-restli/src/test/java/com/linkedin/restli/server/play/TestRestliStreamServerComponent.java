@@ -1,6 +1,7 @@
 package com.linkedin.restli.server.play;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.linkedin.common.callback.Callback;
 import com.linkedin.data.ByteString;
@@ -13,7 +14,6 @@ import com.linkedin.r2.message.stream.entitystream.ReadHandle;
 import com.linkedin.r2.message.stream.entitystream.Reader;
 import com.linkedin.r2.message.stream.entitystream.WriteHandle;
 import com.linkedin.r2.message.stream.entitystream.Writer;
-import com.linkedin.r2.transport.common.bridge.common.TransportCallback;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -21,6 +21,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import org.easymock.Capture;
+import org.easymock.EasyMock;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -49,9 +50,8 @@ public class TestRestliStreamServerComponent {
 
   @Test(dataProvider = "testRemoteAddressData")
   public void testRemoteAddress(final String remoteAddress)throws Exception {
-    Capture<RequestContext> captureContext = new Capture<>();
-    _httpDispatcher.handleRequest(anyObject(StreamRequest.class), capture(captureContext),
-        anyObject(TransportCallback.class));
+    Capture<RequestContext> captureContext = newCapture();
+    _httpDispatcher.handleRequest(EasyMock.<StreamRequest> anyObject(), capture(captureContext), anyObject());
     expectLastCall();
     replay(_httpDispatcher);
 
@@ -78,7 +78,7 @@ public class TestRestliStreamServerComponent {
     Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
     request.method("POST");
     request.uri("/foo/bar");
-    request.headers(ImmutableMap.of("foo", new String[] {"bar"}));
+    request.headers(new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar"))));
     doCreateStreamRequestTest(request.build(), EMPTY_DATA);
   }
 
@@ -94,7 +94,7 @@ public class TestRestliStreamServerComponent {
     Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
     request.method("PUT");
     request.uri("/server/foo/bar");
-    request.headers(ImmutableMap.of("foo", new String[] {"bar"}));
+    request.headers(new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar"))));
     doCreateStreamRequestTest(request.build(), "/foo/bar", EMPTY_DATA);
   }
 
@@ -119,7 +119,7 @@ public class TestRestliStreamServerComponent {
     StreamRequest restRequest = future.join();
 
     assertEquals(request.method(), restRequest.getMethod());
-    assertEquals(restliServer.toSimpleMap(request.headers()), restRequest.getHeaders());
+    assertEquals(restliServer.toSimpleMap(request.getHeaders().toMap()), restRequest.getHeaders());
 
     String expectedUri = customUri == null ? request.uri() : customUri;
     assertEquals(new URI(expectedUri), restRequest.getURI());

@@ -9,7 +9,6 @@ import com.linkedin.r2.transport.common.bridge.common.TransportResponseImpl;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import play.Configuration;
 import play.mvc.Http;
 
 

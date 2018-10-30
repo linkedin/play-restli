@@ -1,6 +1,7 @@
 package com.linkedin.restli.server.play;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.linkedin.r2.filter.R2Constants;
 import com.linkedin.r2.message.RequestContext;
@@ -9,6 +10,7 @@ import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import org.easymock.Capture;
+import org.easymock.EasyMock;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -36,8 +38,8 @@ public class TestRestliServerComponent {
 
   @Test(dataProvider = "testRemoteAddressData")
   public void testRemoteAddress(final String remoteAddress) throws Exception {
-    Capture<RequestContext> captureContext  = new Capture<>();
-    _httpDispatcher.handleRequest(anyObject(RestRequest.class), capture(captureContext), anyObject(RestliTransportCallback.class));
+    Capture<RequestContext> captureContext  = newCapture();
+    _httpDispatcher.handleRequest(EasyMock.<RestRequest> anyObject(), capture(captureContext), anyObject());
     expectLastCall();
     replay(_httpDispatcher);
 
@@ -62,7 +64,8 @@ public class TestRestliServerComponent {
 
   @Test
   public void testCreateRestRequestWithHeaders() throws Exception {
-    Http.Request request = new Http.RequestBuilder().method("POST").uri("/foo/bar").headers(ImmutableMap.of("foo", new String[] {"bar"})).bodyRaw(new byte[0]).build();
+    Http.Headers headers = new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar")));
+    Http.Request request = new Http.RequestBuilder().method("POST").uri("/foo/bar").headers(headers).bodyRaw(new byte[0]).build();
     doCreateRestRequestTest(request);
   }
 
@@ -74,7 +77,8 @@ public class TestRestliServerComponent {
 
   @Test
   public void testCreateRestRequestStripContextPath() throws Exception  {
-    Http.Request request = new Http.RequestBuilder().method("PUT").uri("/server/foo/bar").headers(ImmutableMap.of("foo", new String[] {"bar"})).bodyRaw(new byte[0]).build();
+    Http.Headers headers = new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar")));
+    Http.Request request = new Http.RequestBuilder().method("PUT").uri("/server/foo/bar").headers(headers).bodyRaw(new byte[0]).build();
     doCreateRestRequestTest(request, "/foo/bar");
   }
 
@@ -86,7 +90,7 @@ public class TestRestliServerComponent {
     RestRequest restRequest = restliServer.createRestRequest(request);
 
     assertEquals(request.method(), restRequest.getMethod());
-    assertEquals(restliServer.toSimpleMap(request.headers()), restRequest.getHeaders());
+    assertEquals(restliServer.toSimpleMap(request.getHeaders().toMap()), restRequest.getHeaders());
 
     String expectedUri = customUri == null ? request.uri() : customUri;
     assertEquals(new URI(expectedUri), restRequest.getURI());
