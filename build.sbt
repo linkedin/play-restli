@@ -1,4 +1,5 @@
-val pegasusVersion = "24.0.+"
+val pegasusVersion = "24.0.2"
+val playVersion = "2.6.19"
 
 lazy val playRestli = (project in file("play-restli"))
   .settings(
@@ -7,19 +8,12 @@ lazy val playRestli = (project in file("play-restli"))
     version      := "0.1",
     scalaVersion := "2.12.6",
     libraryDependencies ++= Seq(
-      "d2",
-      "restli-server",
-      "restli-docgen",
-      "restli-server-extras"
-    ).map("com.linkedin.pegasus" % _ % pegasusVersion),
-    libraryDependencies ++= Seq(
-      "com.google.inject" % "guice" % "4.2.+",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.+",
-      "com.typesafe.play" %% "play" % "2.6.+",
-      "com.typesafe.play" %% "play-java" % "2.6.+",
-      "org.slf4j" % "slf4j-api" % "1.7.25"
-    ),
-    libraryDependencies ++= Seq(
+      "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
+      "com.google.inject" % "guice" % "4.2.2",
+      "com.typesafe.akka" %% "akka-stream" % "2.5.16",
+      "com.typesafe.play" %% "play" % playVersion,
+      "com.typesafe.play" %% "play-java" % playVersion,
+      "org.slf4j" % "slf4j-api" % "1.7.25",
       "org.testng" % "testng" % "6.14.3" % Test,
       "org.easymock" % "easymock" % "3.6" % Test
     )
