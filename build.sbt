@@ -31,21 +31,40 @@ lazy val api = (project in file("example/api"))
     )
   )
 
-lazy val server = (project in file("example/server"))
+lazy val commonServerSettings = Seq(
+  restliModelApi := api,
+  organization := "com.linkedin.play-restli",
+  version := "0.1.0",
+  buildInfoKeys += restliModelResourcePackages,
+  buildInfoPackage := "sbtrestli",
+  restliModelResourcePackages := Seq("com.example.fortune"),
+  libraryDependencies ++= Seq(
+    "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
+    guice
+  )
+)
+
+// Uses the bare-bones PlayService plugin
+lazy val playServiceServer = (project in file("example/server"))
   .enablePlugins(RestliModelPlugin, PlayService, BuildInfoPlugin)
   .dependsOn(api, playRestli)
+  .settings(commonServerSettings)
   .settings(
-    restliModelApi := api,
-    name := "example-play-server",
-    organization := "com.linkedin.play-restli",
-    version := "0.1.0",
-    buildInfoKeys += restliModelResourcePackages,
-    buildInfoPackage := "sbtrestli",
-    restliModelResourcePackages := Seq("com.example.fortune"),
+    name := "example-play-service-server",
     libraryDependencies ++= Seq(
-      "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
-      guice,
       akkaHttpServer,
       logback
-    )
+    ),
+    target := target.value / "play-service"
+  )
+
+// Uses the complete PlayJava plugin. PlayLayoutPlugin must be disabled in order to use the Restli project structure
+lazy val playJavaServer = (project in file("example/server"))
+  .enablePlugins(RestliModelPlugin, PlayJava, BuildInfoPlugin)
+  .disablePlugins(PlayLayoutPlugin)
+  .dependsOn(api, playRestli)
+  .settings(commonServerSettings)
+  .settings(
+    name := "example-play-java-server",
+    target := target.value / "play-java"
   )
