@@ -3,7 +3,7 @@ val pegasusVersion = "24.0.+"
 lazy val playRestli = (project in file("play-restli"))
   .settings(
     name         := "play-restli",
-    organization := "com.linkedin.pegasus",
+    organization := "com.linkedin.play-restli",
     version      := "0.1",
     scalaVersion := "2.12.6",
     libraryDependencies ++= Seq(
@@ -29,7 +29,7 @@ lazy val api = (project in file("example/api"))
   .enablePlugins(RestliSchemaPlugin)
   .settings(
     name := "example-play-api",
-    organization := "com.linkedin.pegasus",
+    organization := "com.linkedin.play-restli",
     version := "0.1.0",
     libraryDependencies ++= Seq(
       "com.linkedin.pegasus" % "data" % pegasusVersion,
@@ -43,7 +43,7 @@ lazy val server = (project in file("example/server"))
   .settings(
     restliModelApi := api,
     name := "example-play-server",
-    organization := "com.linkedin.pegasus",
+    organization := "com.linkedin.play-restli",
     version := "0.1.0",
     libraryDependencies ++= Seq(
       "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
