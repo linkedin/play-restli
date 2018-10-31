@@ -32,13 +32,16 @@ lazy val api = (project in file("example/api"))
   )
 
 lazy val server = (project in file("example/server"))
-  .enablePlugins(RestliModelPlugin, PlayService)
+  .enablePlugins(RestliModelPlugin, PlayService, BuildInfoPlugin)
   .dependsOn(api, playRestli)
   .settings(
     restliModelApi := api,
     name := "example-play-server",
     organization := "com.linkedin.play-restli",
     version := "0.1.0",
+    buildInfoKeys += restliModelResourcePackages,
+    buildInfoPackage := "sbtrestli",
+    restliModelResourcePackages := Seq("com.example.fortune"),
     libraryDependencies ++= Seq(
       "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
       guice,
