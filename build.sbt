@@ -6,7 +6,7 @@ lazy val playRestli = (project in file("play-restli"))
     name         := "play-restli",
     organization := "com.linkedin.play-restli",
     version      := "0.1",
-    scalaVersion := "2.12.6",
+    crossScalaVersions := Seq("2.11.12", "2.12.7"),
     libraryDependencies ++= Seq(
       "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
       "com.google.inject" % "guice" % "4.2.2",
