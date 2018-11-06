@@ -1,4 +1,5 @@
 target
 project/target
+example/server/src/mainGeneratedRest
 .idea
 *.iml

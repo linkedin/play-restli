@@ -1,0 +1,20 @@
+{
+  "name" : "fortunes",
+  "namespace" : "com.example.fortune",
+  "path" : "/fortunes",
+  "schema" : "com.example.fortune.Fortune",
+  "doc" : "Very simple RestLi Resource that serves up a fortune cookie.\n\ngenerated from: com.example.fortune.impl.FortunesResource",
+  "collection" : {
+    "identifier" : {
+      "name" : "fortunesId",
+      "type" : "long"
+    },
+    "supports" : [ "get" ],
+    "methods" : [ {
+      "method" : "get"
+    } ],
+    "entity" : {
+      "path" : "/fortunes/{fortunesId}"
+    }
+  }
+}

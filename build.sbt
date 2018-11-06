@@ -37,7 +37,7 @@ lazy val commonServerSettings = Seq(
   version := "0.1.0",
   buildInfoKeys += restliModelResourcePackages,
   buildInfoPackage := "sbtrestli",
-  restliModelResourcePackages := Seq("com.example.fortune"),
+  restliModelResourcePackages := Seq("com.example.fortune.impl"),
   libraryDependencies ++= Seq(
     "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
     guice
