@@ -30,6 +30,6 @@ lazy val sbtPlayRestli = (project in file("sbt-plugin"))
     buildInfoKeys += organization,
     scriptedLaunchOpts ++= Seq("-Dplugin.version=" + version.value),
     scriptedDependencies := scriptedDependencies.dependsOn(publishLocal in playRestli).value,
-    addSbtPlugin("com.linkedin.sbt-restli" % "sbt-restli" % "0.3.0-SNAPSHOT"),
-    addSbtPlugin("com.typesafe.play" % "sbt-plugin" % playVersion)
+    addSbtPlugin("com.linkedin.sbt-restli" % "sbt-restli" % "0.3.0-SNAPSHOT" % Provided),
+    addSbtPlugin("com.typesafe.play" % "sbt-plugin" % playVersion % Provided)
   )
