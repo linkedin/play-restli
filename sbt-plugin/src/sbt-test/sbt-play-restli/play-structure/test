@@ -1,0 +1,14 @@
+> project server
+> restliModelPublish
+
+$ exists api/src/mainGeneratedDataTemplate/java/com/example/fortune/Fortune.java
+
+$ exists api/src/main/idl/com.example.fortune.fortunes.restspec.json
+$ exists api/src/main/snapshot/com.example.fortune.fortunes.snapshot.json
+
+$ exists server/target/scala-2.12/src_managed/main/rest-model/idl/com.example.fortune.fortunes.restspec.json
+$ exists server/target/scala-2.12/src_managed/main/rest-model/snapshot/com.example.fortune.fortunes.snapshot.json
+
+$ exists server/target/scala-2.12/src_managed/main/play-restli/PlayRestli.java
+
+> test
