@@ -25,6 +25,7 @@ object PlayRestliPlugin extends AutoPlugin {
   import autoImport._
 
   override def requires = PlayService && RestliModelPlugin
+  override def trigger = allRequirements
 
   override def projectSettings: Seq[Def.Setting[_]] =
     inConfig(Compile)(playRestliSettings) ++ inConfig(Test)(playRestliSettings) ++ Seq(
