@@ -11,9 +11,9 @@ lazy val api = (project in file("api"))
     )
   )
 
-// Uses the bare-bones PlayService plugin (Enabled by PlayRestliPlugin).
+// Uses the bare-bones PlayService plugin
 lazy val server = (project in file("server"))
-  .enablePlugins(PlayRestliPlugin)
+  .enablePlugins(RestliModelPlugin, PlayService)
   .dependsOn(api)
   .settings(
     name := "server",

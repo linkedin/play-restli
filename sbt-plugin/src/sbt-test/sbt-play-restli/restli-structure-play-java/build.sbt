@@ -13,7 +13,7 @@ lazy val api = (project in file("api"))
 
 // Uses the complete PlayJava plugin; disables PlayLayoutPlugin in order to use the standard Restli project structure.
 lazy val server = (project in file("server"))
-  .enablePlugins(PlayRestliPlugin, PlayJava)
+  .enablePlugins(RestliModelPlugin, PlayJava)
   .disablePlugins(PlayLayoutPlugin)
   .dependsOn(api)
   .settings(
@@ -25,6 +25,6 @@ lazy val server = (project in file("server"))
     ),
     libraryDependencies ++= Seq(
       "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
-      guice, akkaHttpServer, logback
+      guice
     )
   )

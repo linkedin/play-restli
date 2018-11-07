@@ -1,7 +1,7 @@
 package sbtplayrestli
 
 import buildinfo.BuildInfo
-import play.sbt.PlayService
+import com.typesafe.sbt.packager.archetypes.JavaServerAppPackaging
 import sbt.Keys._
 import sbt._
 import sbtrestli.RestliModelPlugin
@@ -24,7 +24,9 @@ object PlayRestliPlugin extends AutoPlugin {
 
   import autoImport._
 
-  override def requires = PlayService && RestliModelPlugin
+  // JavaServerAppPackaging is the closest common ancestor of PlayJava and PlayService.
+  // Starting with Play 2.7.x PlayJava will use PlayService as a base plugin and JavaServerAppPackaging can be replaced.
+  override def requires = RestliModelPlugin && JavaServerAppPackaging
   override def trigger = allRequirements
 
   override def projectSettings: Seq[Def.Setting[_]] =
