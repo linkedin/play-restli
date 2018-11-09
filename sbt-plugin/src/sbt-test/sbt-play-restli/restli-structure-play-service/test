@@ -8,3 +8,5 @@ $ exists api/src/main/snapshot/com.example.fortune.fortunes.snapshot.json
 
 $ exists server/src/mainGeneratedRest/idl/com.example.fortune.fortunes.restspec.json
 $ exists server/src/mainGeneratedRest/snapshot/com.example.fortune.fortunes.snapshot.json
+
+> test

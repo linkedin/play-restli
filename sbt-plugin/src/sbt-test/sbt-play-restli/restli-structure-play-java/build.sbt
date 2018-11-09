@@ -11,11 +11,21 @@ lazy val api = (project in file("api"))
     )
   )
 
+lazy val clientBindings = (project in file("api"))
+  .enablePlugins(RestliClientPlugin)
+  .dependsOn(api)
+  .settings(
+    name := "client",
+    scalaVersion := "2.12.7",
+    libraryDependencies += "com.linkedin.pegasus" % "restli-client" % "24.0.2",
+    target := target.value / "client"
+  )
+
 // Uses the complete PlayJava plugin; disables PlayLayoutPlugin in order to use the standard Restli project structure.
 lazy val server = (project in file("server"))
   .enablePlugins(RestliModelPlugin, PlayJava)
   .disablePlugins(PlayLayoutPlugin)
-  .dependsOn(api)
+  .dependsOn(api, clientBindings % Test)
   .settings(
     name := "server",
     scalaVersion := "2.12.7",
