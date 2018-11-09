@@ -19,9 +19,6 @@ lazy val server = (project in file("server"))
     name := "server",
     scalaVersion := "2.12.7",
     restliModelApi := api,
-    restliModelResourcePackages := Seq(
-      "resources"
-    ),
     libraryDependencies ++= Seq(
       "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
       guice

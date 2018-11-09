@@ -1,23 +1,29 @@
 package sbtplayrestli
 
+import java.net.URLClassLoader
+
 import buildinfo.BuildInfo
 import com.typesafe.sbt.packager.archetypes.JavaServerAppPackaging
+import com.typesafe.config.ConfigFactory
 import sbt.Keys._
 import sbt._
 import sbtrestli.RestliModelPlugin
 import sbtrestli.RestliModelPlugin.autoImport._
 
+import scala.collection.JavaConverters._
+
 object PlayRestliPlugin extends AutoPlugin {
   object autoImport {
     val playRestliDependency = BuildInfo.organization %% "play-restli" % BuildInfo.version
     val playRestliSettings: Seq[Def.Setting[_]] = Seq(
-      sourceGenerators += Def.task {
-        val file = sourceManaged.value / "play-restli" / "PlayRestli.java"
-        val resourcePackages = restliModelResourcePackages.value
+      restliModelResourcePackages := {
+        restliModelResourcePackages.?.value.getOrElse {
+          val resourceUrls = resources.value.map(_.toURI.toURL).toArray
+          val loader = new URLClassLoader(resourceUrls, null)
+          val config = ConfigFactory.defaultApplication(loader)
 
-        generateSource(file, resourcePackages)
-
-        Seq(file)
+          config.getStringList("play.restli.resourcePackages").asScala
+        }
       }
     )
   }
@@ -33,13 +39,4 @@ object PlayRestliPlugin extends AutoPlugin {
     inConfig(Compile)(playRestliSettings) ++ inConfig(Test)(playRestliSettings) ++ Seq(
       libraryDependencies += playRestliDependency
     )
-
-  private def generateSource(file: File, resourcePackages: Seq[String]): Unit = {
-    val source =
-      s"""|public class PlayRestli {
-          |  public static final String[] resourcePackages = ${resourcePackages.mkString("{ \"", "\", \"", "\" };")}
-          |}""".stripMargin
-
-    IO.write(file, source)
-  }
 }
