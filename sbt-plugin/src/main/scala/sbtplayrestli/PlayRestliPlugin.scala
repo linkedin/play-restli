@@ -11,6 +11,7 @@ import sbtrestli.RestliModelPlugin
 import sbtrestli.RestliModelPlugin.autoImport._
 
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 object PlayRestliPlugin extends AutoPlugin {
   object autoImport {
@@ -22,7 +23,8 @@ object PlayRestliPlugin extends AutoPlugin {
           val loader = new URLClassLoader(resourceUrls, null)
           val config = ConfigFactory.defaultApplication(loader)
 
-          config.getStringList("play.restli.resourcePackages").asScala
+          Try(config.getStringList("play.restli.resourcePackages").asScala)
+            .toOption.toSeq.flatten
         }
       }
     )
