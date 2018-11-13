@@ -15,7 +15,7 @@ public class DefaultRestliConfigProvider implements RestliConfigProvider {
   DefaultRestliConfigProvider(Config playConfig) {
     restliConfig = new RestLiConfig();
 
-    List<String> resourcePackages = playConfig.getStringList("play.restli.resourcePackages");
+    List<String> resourcePackages = playConfig.getStringList("restli.resourcePackages");
 
     restliConfig.addResourcePackageNames(resourcePackages);
   }

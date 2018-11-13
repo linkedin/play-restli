@@ -41,13 +41,14 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
                                                )(implicit ec: ExecutionContext)
   extends JavaCompatibleHttpRequestHandler(router, errorHandler, httpConfig, httpFilters, components) {
 
-  private[server] val memoryThresholdBytes: Int = configuration.getOptional[Int]("restli.memoryThresholdBytes").getOrElse(Int.MaxValue)
+  private[server] val memoryThresholdBytes: Long = configuration.underlying.getBytes("restli.memoryThresholdBytes")
   private[server] val SupportedRestliMethods = Set("GET", "POST", "PUT", "PATCH", "HEAD", "DELETE", "OPTIONS")
-  private[server] val useStream: Boolean = configuration.getOptional[Boolean]("restli.useStream").getOrElse(false)
+  private[server] val useStream: Boolean = configuration.get[Boolean]("restli.useStream")
 
+  require(memoryThresholdBytes.isValidInt, "restli.memoryThresholdBytes not a valid 32bit integer.")
 
   private def restliRequestHandler: Handler = {
-    actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes)) { scalaRequest =>
+    actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes.toInt)) { scalaRequest =>
       val javaContext = createJavaContext(scalaRequest.map(data => new RequestBody(new RawBuffer {
         override def size(): java.lang.Long = data.size.toLong
 

@@ -54,7 +54,7 @@ public class RestliServerModule extends Module {
 
   @Override
   public Seq<Binding<?>> bindings(Environment environment, Configuration configuration) {
-    config = configuration.underlying().getConfig("play.restli");
+    config = configuration.underlying().getConfig("restli");
     classLoader = environment.classLoader();
 
     List<RestFilter> restFilters = collectInstances(RestFilter.class, "rest.filters");

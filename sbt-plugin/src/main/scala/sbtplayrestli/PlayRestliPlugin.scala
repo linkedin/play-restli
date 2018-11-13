@@ -23,7 +23,7 @@ object PlayRestliPlugin extends AutoPlugin {
           val loader = new URLClassLoader(resourceUrls, null)
           val config = ConfigFactory.defaultApplication(loader)
 
-          Try(config.getStringList("play.restli.resourcePackages").asScala)
+          Try(config.getStringList("restli.resourcePackages").asScala)
             .toOption.toSeq.flatten
         }
       }
