@@ -80,9 +80,6 @@ public abstract class BaseRestliTransportCallback<T extends Response, P extends 
           public void onError(Throwable e) {
             Logger.error("Failed to read the entity stream.", e);
             dataFuture.complete(ByteString.empty());
-
-//            dataFuture.completeExceptionally(e);
-//            TODO: test -^
           }
 
           @Override
@@ -111,8 +108,7 @@ public abstract class BaseRestliTransportCallback<T extends Response, P extends 
     }
 
     Map<String, String> allHeaders = ImmutableMap.<String, String>builder().putAll(WireAttributeHelper.toWireAttributes(wireAttrs))
-        .put(RestliConstants.RESTLI_ERROR_HEADER,
-            errorMessage)
+        .put(RestliConstants.RESTLI_ERROR_HEADER, errorMessage)
         .build();
     promise.success(createErrorResponse(response.getStatus(), allHeaders));
   }

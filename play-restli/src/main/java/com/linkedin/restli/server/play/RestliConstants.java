@@ -8,6 +8,5 @@ public class RestliConstants {
 
   private RestliConstants() { }
 
-  // TODO: test -- Was "X-LinkedIn-Error", not in any LinkedIn codebase but this one
-  public static final String RESTLI_ERROR_HEADER = "X-RestLi-Error-Response";
+  public static final String RESTLI_ERROR_HEADER = "X-RestLi-Error";
 }
