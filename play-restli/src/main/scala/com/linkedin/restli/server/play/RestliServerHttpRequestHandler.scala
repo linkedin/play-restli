@@ -12,6 +12,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.{Configuration, Environment}
 import play.api.http._
 import play.api.libs.streams.Accumulator
+import play.api.libs.typedmap.TypedKey
 import play.api.mvc._
 import play.api.routing.Router
 import play.core.j.JavaHandlerComponents
@@ -41,13 +42,46 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
                                                )(implicit ec: ExecutionContext)
   extends JavaCompatibleHttpRequestHandler(router, errorHandler, httpConfig, httpFilters, components) {
 
-  private[server] val memoryThresholdBytes: Long = configuration.underlying.getBytes("restli.memoryThresholdBytes")
-  private[server] val SupportedRestliMethods = Set("GET", "POST", "PUT", "PATCH", "HEAD", "DELETE", "OPTIONS")
-  private[server] val useStream: Boolean = configuration.get[Boolean]("restli.useStream")
+  private val memoryThresholdBytes: Long = configuration.underlying.getBytes("restli.memoryThresholdBytes")
+  private val SupportedRestliMethods = Set("GET", "POST", "PUT", "PATCH", "HEAD", "DELETE", "OPTIONS")
+  private val useStream: Boolean = configuration.get[Boolean]("restli.useStream")
+  private val applyFiltersGlobally: Boolean = configuration.get[Boolean]("restli.applyFiltersGlobally")
+  private val RestliRequest: TypedKey[Unit] = TypedKey("restliRequest")
 
   require(memoryThresholdBytes.isValidInt, "restli.memoryThresholdBytes not a valid 32bit integer.")
 
-  private def restliRequestHandler: Handler = {
+  private class RestliRequestStage(handler: Handler) extends Handler.Stage {
+    override def apply(requestHeader: RequestHeader): (RequestHeader, Handler) = {
+      (requestHeader.addAttr[Unit](RestliRequest, Unit), handler)
+    }
+  }
+
+  override def filterHandler(request: RequestHeader, handler: Handler): Handler = {
+    if (applyFiltersGlobally) {
+      handler match {
+        case action: EssentialAction => filterAction(action)
+        case _ => handler
+      }
+    } else {
+      super.filterHandler(request, handler)
+    }
+  }
+
+  override def filterAction(next: EssentialAction): EssentialAction = {
+    EssentialAction(request =>
+      if (request.attrs.contains(RestliRequest)) {
+        super.filterAction(next)(request)
+      } else {
+        val frontendFilters = httpFilters match {
+          case wff: WithFrontendFilters => wff.getFrontendFilters.asScala
+          case _ => httpFilters.filters
+        }
+        FilterChain(next, frontendFilters.toList)(request)
+      }
+    )
+  }
+
+  private def restliRequestHandler: Handler = new RestliRequestStage(
     actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes.toInt)) { scalaRequest =>
       val javaContext = createJavaContext(scalaRequest.map(data => new RequestBody(new RawBuffer {
         override def size(): java.lang.Long = data.size.toLong
@@ -63,95 +97,97 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
       restliServerApi.handleRequest(javaContext.request(), callback)
       buildResult[Array[Byte]](callback, (result, body) => result(body))
     }
-  }
+  )
 
-  private def restliStreamRequestHandler: Handler = new EssentialAction {
-    override def apply(requestHeader: RequestHeader): Accumulator[ByteString, Result] = {
-      trait EntityStreamWriter extends Writer {
-        def write(bytes: ByteString): Future[EntityStreamWriter]
-        def done(): Unit
-        def error(ex: Throwable): Unit
-      }
-
-      val writer: EntityStreamWriter = new EntityStreamWriter {
-        val abortException = new AtomicReference[Throwable]()
-        var writeHandle: Option[WriteHandle] = None
-        val queue = new ConcurrentLinkedQueue[(Promise[EntityStreamWriter], ByteString)]()
-
-        override def onAbort(e: Throwable): Unit = {
-          // Abort all remaining items
-          abortException.set(e)
-          while (true) {
-            queue.poll() match {
-              case null =>
-                return
-              case (promise, _) =>
-                promise.failure(e)
-            }
-          }
+  private def restliStreamRequestHandler: Handler = new RestliRequestStage(
+    new EssentialAction {
+      override def apply(requestHeader: RequestHeader): Accumulator[ByteString, Result] = {
+        trait EntityStreamWriter extends Writer {
+          def write(bytes: ByteString): Future[EntityStreamWriter]
+          def done(): Unit
+          def error(ex: Throwable): Unit
         }
 
-        override def onWritePossible(): Unit = {
-          queue.synchronized {
-            writeHandle.foreach { wh =>
-              while (wh.remaining() > 0 && !queue.isEmpty) {
-                queue.remove() match {
-                  case (promise, data) =>
-                    wh.write(com.linkedin.data.ByteString.copy(data.toArray))
-                    promise.success(this)
+        val writer: EntityStreamWriter = new EntityStreamWriter {
+          val abortException = new AtomicReference[Throwable]()
+          var writeHandle: Option[WriteHandle] = None
+          val queue = new ConcurrentLinkedQueue[(Promise[EntityStreamWriter], ByteString)]()
+
+          override def onAbort(e: Throwable): Unit = {
+            // Abort all remaining items
+            abortException.set(e)
+            while (true) {
+              queue.poll() match {
+                case null =>
+                  return
+                case (promise, _) =>
+                  promise.failure(e)
+              }
+            }
+          }
+
+          override def onWritePossible(): Unit = {
+            queue.synchronized {
+              writeHandle.foreach { wh =>
+                while (wh.remaining() > 0 && !queue.isEmpty) {
+                  queue.remove() match {
+                    case (promise, data) =>
+                      wh.write(com.linkedin.data.ByteString.copy(data.toArray))
+                      promise.success(this)
+                  }
                 }
               }
             }
           }
-        }
 
-        override def onInit(wh: WriteHandle): Unit = {
-          writeHandle.synchronized {
-            writeHandle = Some(wh)
+          override def onInit(wh: WriteHandle): Unit = {
+            writeHandle.synchronized {
+              writeHandle = Some(wh)
+            }
+          }
+
+          override def write(bytes: ByteString): Future[EntityStreamWriter] = {
+            if (abortException.get() != null) {
+              // Already aborted
+              Future.failed(abortException.get())
+            } else {
+              // Enqueue
+              val promise = Promise[EntityStreamWriter]()
+              queue.add((promise, bytes))
+              onWritePossible()
+              promise.future
+            }
+          }
+
+          override def done(): Unit = {
+            Threads.withContextClassLoader(env.classLoader) {
+              writeHandle.foreach(_.done())
+            }
+          }
+
+          override def error(ex: Throwable): Unit = {
+            Threads.withContextClassLoader(env.classLoader) {
+              writeHandle.foreach(_.error(ex))
+            }
           }
         }
 
-        override def write(bytes: ByteString): Future[EntityStreamWriter] = {
-          if (abortException.get() != null) {
-            // Already aborted
-            Future.failed(abortException.get())
-          } else {
-            // Enqueue
-            val promise = Promise[EntityStreamWriter]()
-            queue.add((promise, bytes))
-            onWritePossible()
-            promise.future
-          }
-        }
+        val sink = Sink.foldAsync[EntityStreamWriter, ByteString](writer)((thisWriter, bytes) => {
+          thisWriter.write(bytes)
+        }).mapMaterializedValue(_.map(_.done()).recover {
+          case ex: Throwable => writer.error(ex)
+        })
 
-        override def done(): Unit = {
-          Threads.withContextClassLoader(env.classLoader) {
-            writeHandle.foreach(_.done())
-          }
-        }
+        val javaContext = createJavaContext(Request(requestHeader, new RequestBody(EntityStreams.newEntityStream(writer))), components.contextComponents)
 
-        override def error(ex: Throwable): Unit = {
-          Threads.withContextClassLoader(env.classLoader) {
-            writeHandle.foreach(_.error(ex))
-          }
-        }
+        val callback: RestliStreamTransportCallback = new RestliStreamTransportCallback()
+        restliStreamServerApi.handleRequest(javaContext.request(), callback)
+        val resultFuture = buildResult[Source[ByteString, _]](callback, (result, body) => result.copy(body = HttpEntity.Streamed(body.asScala, None, result.body.contentType)))
+
+        Accumulator(sink.mapMaterializedValue(_ => resultFuture))
       }
-
-      val sink = Sink.foldAsync[EntityStreamWriter, ByteString](writer)((thisWriter, bytes) => {
-        thisWriter.write(bytes)
-      }).mapMaterializedValue(_.map(_.done()).recover {
-        case ex: Throwable => writer.error(ex)
-      })
-
-      val javaContext = createJavaContext(Request(requestHeader, new RequestBody(EntityStreams.newEntityStream(writer))), components.contextComponents)
-
-      val callback: RestliStreamTransportCallback = new RestliStreamTransportCallback()
-      restliStreamServerApi.handleRequest(javaContext.request(), callback)
-      val resultFuture = buildResult[Source[ByteString, _]](callback, (result, body) => result.copy(body = HttpEntity.Streamed(body.asScala, None, result.body.contentType)))
-
-      Accumulator(sink.mapMaterializedValue(_ => resultFuture))
     }
-  }
+  )
 
   private def buildResult[T](callback: BaseRestliTransportCallback[_, _ <: BaseGenericResponse[T], T], addBody: (Results.Status, T) => Result) = {
     callback.getPromise.future.map { response =>

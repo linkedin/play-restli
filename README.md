@@ -42,6 +42,9 @@ restli {
   # Stream rest.li request/response bodies.
   useStream = false
 
+  # Apply filters outside the play context path (play.http.context).
+  applyFiltersGlobally = false
+
   rest {
     # List of RestFilters to apply to each rest.li request and response.
     filters = []
