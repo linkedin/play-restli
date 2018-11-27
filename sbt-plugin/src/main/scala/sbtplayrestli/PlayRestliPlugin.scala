@@ -3,12 +3,12 @@ package sbtplayrestli
 import java.net.URLClassLoader
 
 import buildinfo.BuildInfo
-import com.typesafe.sbt.packager.archetypes.JavaServerAppPackaging
+import com.linkedin.sbtrestli.RestliModelPlugin
+import com.linkedin.sbtrestli.RestliModelPlugin.autoImport._
 import com.typesafe.config.ConfigFactory
+import com.typesafe.sbt.packager.archetypes.JavaServerAppPackaging
 import sbt.Keys._
 import sbt._
-import sbtrestli.RestliModelPlugin
-import sbtrestli.RestliModelPlugin.autoImport._
 
 import scala.collection.JavaConverters._
 import scala.util.Try

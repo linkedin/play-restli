@@ -1,10 +1,10 @@
 package sbtplayrestli
 
+import com.linkedin.sbtrestli.RestliModelPlugin
+import com.linkedin.sbtrestli.RestliModelPlugin.autoImport._
 import play.sbt.PlayLayoutPlugin
 import sbt.Keys._
 import sbt._
-import sbtrestli.RestliModelPlugin
-import sbtrestli.RestliModelPlugin.autoImport._
 
 /** Generate rest models into target directory if using play layout. */
 object PlayRestliLayoutPlugin extends AutoPlugin {
