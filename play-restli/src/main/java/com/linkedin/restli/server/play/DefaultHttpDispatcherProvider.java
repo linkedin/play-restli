@@ -8,6 +8,7 @@ import com.linkedin.restli.server.DelegatingTransportDispatcher;
 import com.linkedin.restli.server.RestLiConfig;
 import com.linkedin.restli.server.RestLiServer;
 import com.linkedin.restli.server.resources.ResourceFactory;
+import com.typesafe.config.Config;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -18,6 +19,7 @@ public class DefaultHttpDispatcherProvider implements HttpDispatcherProvider {
 
   @Inject
   DefaultHttpDispatcherProvider(
+      Config config,
       RestLiConfig restLiConfig,
       ResourceFactory resourceFactory,
       Engine engine,
@@ -25,7 +27,11 @@ public class DefaultHttpDispatcherProvider implements HttpDispatcherProvider {
   ) {
     RestLiServer restLiServer = new RestLiServer(restLiConfig, resourceFactory, engine);
     httpDispatcher = new HttpDispatcher(
-        new FilterChainDispatcher(new DelegatingTransportDispatcher(restLiServer, restLiServer), filterChain));
+        new FilterChainDispatcher(
+            new PlayContextDispatcher(
+                config.getString("play.http.context"),
+                new DelegatingTransportDispatcher(restLiServer, restLiServer)
+            ), filterChain));
   }
 
   @Override
