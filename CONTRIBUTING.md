@@ -11,10 +11,11 @@ license.
 Responsible Disclosure of Security Vulnerabilities
 ==================================================
 
-Please do not file reports on Github for security issues. Reports 
-should be encrypted using PGP ([public key](https://www.linkedin.com/help/linkedin/answer/79676)) and sent to
-security@linkedin.com preferably with the title:
-"Github linkedin/<project> - <short summary>".
+Do not file an issue on Github for security issues. Please review
+the [guidelines for disclosure](https://www.linkedin.com/help/linkedin/answer/62924).  Reports should
+be encrypted using PGP ([public key](https://gist.github.com/chriseppstein/3f45d3a8e6fb42f24cb7b3f77f21381e)) and sent to
+[security@linkedin.com][mailto:security@linkedin.com?subject=Vulnerability%20in%20Github%20LinkedIn/play-restli%20-%20%3Csummary%3E] preferably with the title
+"Vulnerability in Github LinkedIn/play-restli - &lt;short summary&gt;".
 
 Tips for Getting Your Pull Request Accepted
 ===========================================
