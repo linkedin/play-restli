@@ -23,7 +23,7 @@ public class PlayContextDispatcher implements TransportDispatcher {
   private String _context;
   private TransportDispatcher _transportDispatcher;
 
-  PlayContextDispatcher(String context, TransportDispatcher transportDispatcher) {
+  public PlayContextDispatcher(String context, TransportDispatcher transportDispatcher) {
     _context = context.endsWith("/") ? context.substring(0, context.length() - 1) : context;
     _transportDispatcher = transportDispatcher;
   }
