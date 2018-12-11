@@ -1,15 +1,15 @@
-# Play ❤ ️rest.li
+# Play :heart: ️Rest.li
 
-Use the [Play server](https://playframework.com) as the backend for your [rest.li](https://rest.li) service with play-restli!
+Use the [Play Framework](https://playframework.com) as the backend for your [rest.li](https://rest.li) service with play-restli!
 
 Setup
 -----
 Add play-restli to your plugin dependencies along with play and sbt-restli:
 ```scala
 // project/plugins.sbt
-addSbtPlugin("com.linkedin.play-restli" % "sbt-plugin" % "0.1.0")
-addSbtPlugin("com.linkedin.sbt-restli" % "sbt-restli" % "0.3.0")
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.6.19")
+addSbtPlugin("com.linkedin.play-restli" % "sbt-plugin" % "<version>")
+addSbtPlugin("com.linkedin.sbt-restli" % "sbt-restli" % "<version>")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "<version>")
 ```
 
 Usage
@@ -18,12 +18,10 @@ Usage
 
 Apply your preferred play plugin (PlayService, PlayJava, or PlayScala) to your server project alongside the RestliModelPlugin.
 
-PlayService is a minimal play plugin delivered with play 2.6.8+, and is the recommended plugin for use with play-restli. If you choose to use one of other play plugins, we recommend disabling PlayLayoutPlugin in order to use the standard rest.li project structure. 
+PlayService is a minimal play plugin delivered with play 2.6.8+, and is the recommended plugin for use with play-restli. If you choose to use one of other play plugins, we recommend disabling PlayLayoutPlugin in order to use the standard Maven project structure. 
 
-Finally, create the play configuration file (`src/main/resources/application.conf` if using rest.li structure (recommended), *or* `conf/application.conf` if using play structure) and specify the list of packages which contain rest.li resources.
+Finally, create the play configuration file (`src/main/resources/application.conf` if using the default Maven structure (recommended), *or* `conf/application.conf` if using play structure) and specify the list of packages which contain rest.li resources.
 ```properties
-# This is the main configuration file for the application.
-# https://www.playframework.com/documentation/latest/ConfigFile
 restli.resourcePackages = ["com.example.fortune.impl"]
 ```
 
