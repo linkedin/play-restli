@@ -11,7 +11,6 @@ lazy val playRestli = (project in file("play-restli"))
     crossScalaVersions := Seq("2.11.12", "2.12.7"),
     libraryDependencies ++= Seq(
       "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
-      "com.typesafe.akka" %% "akka-stream" % "2.5.16",
       "com.typesafe.play" %% "play" % playVersion,
       "com.typesafe.play" %% "play-java" % playVersion,
       "org.slf4j" % "slf4j-api" % "1.7.25",
