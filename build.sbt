@@ -25,7 +25,8 @@ lazy val sbtPlayRestli = (project in file("sbt-plugin"))
   .enablePlugins(SbtPlugin, BuildInfoPlugin)
   .settings(
     name := "sbt-plugin",
-    crossSbtVersions := Seq("1.2.6", "0.13.17"),
+    crossSbtVersions := Seq("0.13.17", "1.2.6"),
+    crossScalaVersions := Seq("2.10.7", "2.12.7"),
     buildInfoKeys += organization,
     scriptedLaunchOpts ++= Seq("-Dplugin.version=" + version.value),
     scriptedDependencies := scriptedDependencies.dependsOn(publishLocal in playRestli).value,
