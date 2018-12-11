@@ -1,5 +1,5 @@
 val pegasusVersion = "24.0.2"
-val playVersion = "2.6.19"
+val playVersion = "2.6.20"
 
 ThisBuild / organization := "com.linkedin.play-restli"
 ThisBuild / version      := "0.1.0-SNAPSHOT"
