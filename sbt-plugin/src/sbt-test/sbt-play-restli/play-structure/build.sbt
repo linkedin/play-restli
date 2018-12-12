@@ -17,7 +17,7 @@ lazy val clientBindings = (project in file("api"))
   .settings(
     name := "client",
     scalaVersion := "2.12.7",
-    libraryDependencies += "com.linkedin.pegasus" % "restli-client" % "24.0.2",
+    libraryDependencies += "com.linkedin.pegasus" % "restli-client" % pegasusVersion,
     target := target.value / "client"
   )
 
