@@ -1,4 +1,4 @@
-# Play :heart: ️Rest.li
+# Play :heart: ️Rest.li [![Build Status](https://travis-ci.org/linkedin/play-restli.svg?branch=master)](https://travis-ci.org/linkedin/play-restli) [![Latest Version](https://img.shields.io/github/tag/linkedin/play-restli.svg?label=version)](https://bintray.com/play-restli/sbt-plugins/sbt-play-restli)
 
 Use the [Play Framework](https://playframework.com) as the backend for your [rest.li](https://rest.li) service with play-restli!
 
