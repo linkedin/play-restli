@@ -4,7 +4,7 @@ val playVersion = "2.6.20"
 val repoUrl = url("https://github.com/linkedin/play-restli")
 
 inThisBuild(Seq(
-  licenses := Seq(("BSD 2-Clause", url("https://github.com/linkedin/play-restli/blob/master/LICENSE"))),
+  licenses := Seq(("BSD Simplified", url("https://github.com/linkedin/play-restli/blob/master/LICENSE"))),
   homepage := Some(repoUrl),
   scmInfo := Some(ScmInfo(repoUrl, "scm:git:git@github.com:linkedin/play-restli.git")),
   developers := List(Developer("TylerHorth", "Tyler Horth", "tylerhorth@outlook.com", url("https://github.com/TylerHorth"))),
