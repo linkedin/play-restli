@@ -1,0 +1,51 @@
+language: scala
+
+jdk: oraclejdk8
+
+stages:
+  - name: test
+  - name: release
+    if: ((branch = master) AND (type != pull_request)) OR (tag IS present)
+
+jobs:
+  include:
+    - name: "sbt-plugin [sbt 0.13]"
+      script: sbt ++2.10.7 ^^0.13.17 sbtPlayRestli/scripted
+    - name: "sbt-plugin [sbt 1.x]"
+      script: sbt ++2.12.7 ^^1.2.6 sbtPlayRestli/scripted
+    - name: "play-restli [scala 2.11]"
+      script: sbt ++2.11.12 playRestli/test
+    - name: "play-restli [scala 2.12]"
+      script: sbt ++2.12.7 playRestli/test
+    - stage: release
+      name: "bintray/sonatype release"
+      script: |
+        openssl aes-256-cbc -K $encrypted_4f05c92a794d_key -iv $encrypted_4f05c92a794d_iv -in travis/secrets.tar.enc -out travis/local.secrets.tar -d &&
+          tar xv -C travis -f travis/local.secrets.tar &&
+          sbt 'project playRestli' '+releaseEarly' &&
+          sbt 'project sbtPlayRestli' '^releaseEarly'
+
+
+# These directories are cached to S3 at the end of the build
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt
+
+before_cache:
+  # Cleanup the cached directories to avoid unnecessary cache updates
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+  - find $HOME/.sbt        -name "*.lock"               -print -delete
+
+env:
+  global:
+  # travis encrypt 'PGP_PASS=...'
+  - secure: "N6LXO7BSSaqyTimEIUa8RuT6ctgH/MP1ZbfSerfZbJNafLa7IQfc01hCS5dZgvq7SDP5bhGfum6Ib7CiEIY2H8i0TcJkhlVQ8LSGgMPKN2SHJNDhFFqVgwIzxDf9oixXdXHSqTK4RpbmVfudqHVtrqlxXfBqBXZw+hDJ9tclzjSTNYYh0inbNwzsaPU+p8VynPeHq5mnyHuBy+DdDLTgiBBesOQgK19IjnnN6XHUJdHPrLp0B/d05KwbFeFQDKeGiBlUTxrnQi2wNtbWRtxcLhBzjRCnbompFCNzgjOH9gExmWx4tFAvPmKD5QEz/wQHxS+bP8vAP7f8G52mosIM1n05sjCxM+5pFUC7zprmAhvIarOHTm66CLIln66vTm3gbB2rWgHBqoZwK879vlG8J9Tar/w7qxfy1vdkoamevDngYfD4qpYfDdHZxuMr8Yxq5Ng5V/oKocX04yJNfYR3R9JOPDtPl2q0TjjnGj89Vy3RN+30QSn76VzmkCW+Y7undbbnBQLxaKpaeTbi/eToYkfoGq18OqmCdJmE3TyTKjf0M0+PDTCZwUMsFV9lVg4/4F2wzPCwH6Uw4cdDEQaTaCEyNmD4T5s6scRisKo+7J2PKAXJQMLSLiesIjzVAFnE+nu8jXRrtNfPC9IkXwt02Owen2h8vblajYLaJDMcvM0="
+  # travis encrypt 'BINTRAY_USER=...'
+  - secure: "nUGW+iN4mdRr8lCP1B8t46nMAkMI9qKu2ewAp7ou8OPkxD7zHLQfiDg19h2lYzf8FBlQqnqTXaTeapUckfVgDDAuxLrDEwJSHtWl80hfsp4Cn+cq+ClcTMKu3tJVGs+MR/okqMyg4q8yQfDnCWlMJEWOp9ZzSKo2TxFci8oAW7uCNsP4NLPFNjLzeqTC8dKc5TyYIIiBFFkdLTvp22assDm0dSh5t6WnoFvk5eKbBH5s6UjEvhmpLrB54m8lCe5BOj5rJ7XOVs6JHoOFF2ddRJ4Y1OupQZg82n5gxuSU2IOUiRv65+ihnsun8XhewHfp0xtKpWLvscXgR/CB4VUiB7pfixb2qDCaknkCqV/d3MSg8TJFCPvkIsGowVZIK8lCuujZgyGmutPooBI5Orz1dbpZVl0oOvJoRP6fvydO4GUEIBo8ppE92y9D4KehMTZ7nehaKO05KRMfp+xv8LhN7AO3Bts8O8mHLGsbWPkhN6bJI+t49d346DByqvHk75NwBWVLTXmxJk6SHHxf8dimqAf/pbOm14sWe0hzA2/UDE0XI/Tt4izA6ud5HJFYOrtnO0cSLgY6qLwXMZjjbdaZS/XtW6QqgSHsWpOD97Txse/dcBKakFsI0ooTo4Y7BQh+r+MmmxZ3bpiHzUiJLPhapG93j1B+HQurv5ADdEdLNns="
+  # travis encrypt 'BINTRAY_PASS=...'
+  - secure: "JSvWhefkkDODq9gK55EWYr7szwy1GaqBNaxN6abYu+BQ0q6Ajq6Y6vWss7rpW3qiWiEmKAL4SsCefj+EeC8FNxCFZyyPewjQn+3JDEjp0nbyf76hJZR3Y2ttI9ur+uqSuPepOyIW1XWhut5EqyWBt+khwqYmBt15+JtzBIbmtOxpJNX4/Kfj8sVc6xir3d/0T1hXWLULkATM9tjXwVIbxTkGlqY8MxWP7YAPInE0wcUKuMXseYzvL2r3kWMh9qZ+GxD/BklHT/coCIbNVNizbap9Yq+o9mHXFzAvIZmFPA80yoJQ5qNOKEqDQMLhXD+VOeJEkSJTSLdNRb9ky9OqH0jh4HuP1aRLMAiqr/gEQ9/a+zfooiQ2uEB1O+E1I7ksqYtPOClz2YAB6BsUuQXTu99rlPsfdA+Pg/UBFI0SJEQZWNQGQl38Ny46MX5tHzU9JAgYgnVDXjwmlZ3WWXhGb3TK9VcPLdrCtSimkxd2hqifBBHDKv9BYAqabdYAHAHdClROg9P+8xUftejDSqr7XijQBGV3qOAAJPcvCDWMvia4eM+Lt1gjX7wqjCNnsqBbxs7x2b6e8g3xmjrdz/kGHA/Hd6VR544fyas3bC/bDon6/Q7t9tsKRuKPIn32vticelOqwVAq/fBjY6uRc+jqszkHW75b9aVSxpCdqfbb2tc="
+  # travis encrypt 'SONA_USER=...'
+  - secure: "eW3Y4WYY7Xh1Nw4zWC6zgrT7WHFfcrBCDw5u5Eh8wMdpNZIOKTArPdLG6RRkKDtbEw5LxKnLsAaT98cd2geFtsKlZ5UuniCjJemU6Ffc0y+K3cIMGL32sCTSUimUVTF1o9H6TH0ovZtV0udi6Su1xMtzbKnPy4u4GGvpmHkKqo37usHbnzfdk/IR5unPexV6WdYEzRzCDx7i8kzHAlK+raYR2LWuMTvgypdvDYi5d0F+y4201t8IhecOAvsarlIFUcbyxxKSPitDkJMZ4kKU8V5oaTH1/VstP7l+aVu0oPn/EoIL6wL1J8W4t3gtcBCltTJXEY4Nq6DXdeih2LfNwALtyfO8u5EePkxu+b4uCL/9XUFzbNhy70BnUJ8Mozwk5yjGu4HEqLLSlHyoW0J7R7bhDaxoKZD2v1dsIT0Tccl0+kP1Tmg8tGR++pswT2uQabVWxU1MPTi4ei/o1ygkgs1Kn8DgORlyjOGZq58U2kgtazmcGnXBt+s82nYVgcgtS/v/UIYjlUelsVeqCTUeXiaDjP73tzMkFoSd/ti42odTZyl/4ytnpX/t5S0arCd2DBsBCITTUpf+5MYrPI+bOpz/d3RzkyxKMMfZjLDFL6shpMhg0d72s6HSbK+6P114JjXqF9itCmAG7YWyd5YG4DCcD8iQJOPo6trjdEh+6LU="
+  # travis encrypt 'SONA_PASS=...'
+  - secure: "FY62ZQl8t42bPoHnU4AroyBwmgtKxDDXXB/A5ZqU+6dL2rdGvTiAuviP+PcI3UQv2p07J7WY1E7/SBtVOCQAVIaDMjA9LxTKIz0lrBPvX3qyodfGNcKwsCTWOP/DWKGhdfm/pUvNauOok243hzHGIIo6oDHa1zs7p69OOtuEPWPesIaNBbAGxqWSsGT8ODPGcZrYiPLsGhbMg5oIVy1OpUnqpBth+FV5VbtGeiOfo9xRz8Nqd5X1zf86UckIBZZxxOsFkGAQOuLd0pz0kL+zZhn2bwpuxSYIhTbsTjTFhqgzKKHf+vsD/7C4b90vKBIXUfelnUoAUIyObhGw2ryyRtnB27Uypyn8uE4+ogo9Cddmsq8HM+j4m8I2cvNrDUTZax6SxmQtBO/1egH3jiSgWGVlOxrASwTcpW08tueNE8lecqnE10MvjykiW1bpmmlm8cl5BGSjuchpV8XweV8eB+FEkKlzmNbhGENvwnkIX42Fugo751WcSf4PDhHGofDJO6UphlG3PXc8TF7EMPscYOnm6Qu4b6GaOZkKQpUqr0OLkXYPjijkDw25Bj62IPzmrNJ50oCfS3x4lM6RZQW58IpDPC2oZkDQMeOjlcdRr7lz3ay9oxnx9L10FBkEyScmzULi2HFpLdpiWdrCxaGVBur0u6wzDCCGgh1vlquon3U="

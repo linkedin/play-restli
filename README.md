@@ -7,7 +7,7 @@ Setup
 Add play-restli to your plugin dependencies along with play and sbt-restli:
 ```scala
 // project/plugins.sbt
-addSbtPlugin("com.linkedin.play-restli" % "sbt-plugin" % "<version>")
+addSbtPlugin("com.linkedin.play-restli" % "sbt-play-restli" % "<version>")
 addSbtPlugin("com.linkedin.sbt-restli" % "sbt-restli" % "<version>")
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "<version>")
 ```
@@ -82,8 +82,8 @@ Examples
 --------
 > **Note**: If you copy-paste an example, make sure to specify the play-restli version in `project/plugins.sbt`.
 
-Complete examples are located in the [plugin sbt-test directory](sbt-plugin/src/sbt-test/sbt-play-restli). 
+Complete examples are located in the [plugin sbt-test directory](sbt-play-restli/src/sbt-test/sbt-play-restli). 
 
-- [Restli-structure-play-service](sbt-plugin/src/sbt-test/sbt-play-restli/restli-structure-play-service) uses the recommended approach, leveraging the recently introduced PlayService plugin.
-- [Restli-structure-play-java](sbt-plugin/src/sbt-test/sbt-play-restli/restli-structure-play-java) uses the PlayJava plugin, but disables PlayLayoutPlugin in order to use the standard rest.li project structure. If using scala, PlayScala can be used instead.
-- [Play-structure](sbt-plugin/src/sbt-test/sbt-play-restli/play-structure) uses the PlayJava plugin, but does not disable PlayLayoutPlugin, thus using the default play project structure. This is unidiomatic for a rest.li service, but is nevertheless supported. 
+- [Restli-structure-play-service](sbt-play-restli/src/sbt-test/sbt-play-restli/restli-structure-play-service) uses the recommended approach, leveraging the recently introduced PlayService plugin.
+- [Restli-structure-play-java](sbt-play-restli/src/sbt-test/sbt-play-restli/restli-structure-play-java) uses the PlayJava plugin, but disables PlayLayoutPlugin in order to use the standard rest.li project structure. If using scala, PlayScala can be used instead.
+- [Play-structure](sbt-play-restli/src/sbt-test/sbt-play-restli/play-structure) uses the PlayJava plugin, but does not disable PlayLayoutPlugin, thus using the default play project structure. This is unidiomatic for a rest.li service, but is nevertheless supported. 
