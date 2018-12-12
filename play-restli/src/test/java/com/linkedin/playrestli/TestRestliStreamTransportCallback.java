@@ -18,11 +18,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.Before;
+import org.junit.Test;
 import scala.compat.java8.FutureConverters;
 
-import static org.testng.AssertJUnit.assertEquals;
+import static org.junit.Assert.*;
 
 
 /**
@@ -37,7 +37,7 @@ public class TestRestliStreamTransportCallback {
   private static final String WIRE_ATTR_VALUE = "wireAttrValue";
   private Materializer materializer;
 
-  @BeforeMethod
+  @Before
   public void setUp() {
     callback = new RestliStreamTransportCallback();
     final ActorSystem system = ActorSystem.create("test");
@@ -86,7 +86,7 @@ public class TestRestliStreamTransportCallback {
         }
       })), materializer).toCompletableFuture().get(1, TimeUnit.DAYS);
 
-    assertEquals(restResponse.getEntity().copyBytes(), baos.toByteArray());
+    assertArrayEquals(restResponse.getEntity().copyBytes(), baos.toByteArray());
   }
 
   @Test

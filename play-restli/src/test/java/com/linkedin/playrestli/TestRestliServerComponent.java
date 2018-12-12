@@ -7,36 +7,42 @@ import com.linkedin.r2.filter.R2Constants;
 import com.linkedin.r2.message.RequestContext;
 import com.linkedin.r2.message.rest.RestRequest;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
+import com.tngtech.java.junit.dataprovider.DataProvider;
+import com.tngtech.java.junit.dataprovider.DataProviderRunner;
+import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import play.libs.Json;
 import play.mvc.Http;
 
 import static org.easymock.EasyMock.*;
-import static org.testng.AssertJUnit.assertEquals;
+import static org.junit.Assert.*;
+
 
 /**
  * Created by rli on 8/27/14.
  *
  */
+@RunWith(DataProviderRunner.class)
 public class TestRestliServerComponent {
 
   private static final String CHARSET = "UTF-8";
   private RestliServerComponent restliServer;
   private HttpDispatcher _httpDispatcher;
 
-  @BeforeMethod
+  @Before
   public void setUp() {
     _httpDispatcher = createMock(HttpDispatcher.class);
     restliServer = new RestliServerComponent(_httpDispatcher);
   }
 
-  @Test(dataProvider = "testRemoteAddressData")
+  @Test
+  @UseDataProvider("testRemoteAddressData")
   public void testRemoteAddress(final String remoteAddress) throws Exception {
     Capture<RequestContext> captureContext  = newCapture();
     _httpDispatcher.handleRequest(EasyMock.<RestRequest> anyObject(), capture(captureContext), anyObject());
@@ -50,8 +56,8 @@ public class TestRestliServerComponent {
     assertEquals(remoteAddress, captureContext.getValue().getLocalAttr(R2Constants.REMOTE_ADDR));
   }
 
-  @DataProvider(name = "testRemoteAddressData")
-  private Object[][] testRemoteAddressData(){
+  @DataProvider
+  public static Object[][] testRemoteAddressData(){
     return new String[][]{{"127.0.0.1"}, {null}};
   }
 
@@ -59,7 +65,7 @@ public class TestRestliServerComponent {
   @Test
   public void testCreateRestRequestEmpty() throws Exception {
     Http.Request request = new Http.RequestBuilder().bodyRaw(new byte[0]).build();
-    doCreateRestRequestTest(request, null);
+    doCreateRestRequestTest(request);
   }
 
   @Test
@@ -75,25 +81,13 @@ public class TestRestliServerComponent {
     doCreateRestRequestTest(request);
   }
 
-  @Test
-  public void testCreateRestRequestStripContextPath() throws Exception  {
-    Http.Headers headers = new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar")));
-    Http.Request request = new Http.RequestBuilder().method("PUT").uri("/server/foo/bar").headers(headers).bodyRaw(new byte[0]).build();
-    doCreateRestRequestTest(request, "/foo/bar");
-  }
-
   private void doCreateRestRequestTest(Http.Request request) throws Exception {
-    doCreateRestRequestTest(request, null);
-  }
-
-  private void doCreateRestRequestTest(Http.Request request, String customUri) throws Exception {
     RestRequest restRequest = restliServer.createRestRequest(request);
 
     assertEquals(request.method(), restRequest.getMethod());
     assertEquals(restliServer.toSimpleMap(request.getHeaders().toMap()), restRequest.getHeaders());
 
-    String expectedUri = customUri == null ? request.uri() : customUri;
-    assertEquals(new URI(expectedUri), restRequest.getURI());
+    assertEquals(new URI(request.uri()), restRequest.getURI());
 
     String entityString = restRequest.getEntity().asString(CHARSET);
     assertEquals(request.body().asRaw().asBytes().utf8String(), entityString);

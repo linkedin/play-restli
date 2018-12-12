@@ -15,6 +15,9 @@ import com.linkedin.r2.message.stream.entitystream.Reader;
 import com.linkedin.r2.message.stream.entitystream.WriteHandle;
 import com.linkedin.r2.message.stream.entitystream.Writer;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
+import com.tngtech.java.junit.dataprovider.DataProvider;
+import com.tngtech.java.junit.dataprovider.DataProviderRunner;
+import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -22,34 +25,36 @@ import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 import play.libs.Json;
 import play.mvc.Http;
 
 import static org.easymock.EasyMock.*;
-import static org.testng.AssertJUnit.assertEquals;
+import static org.junit.Assert.*;
 
 
 /**
  * Created by qliu
  *
  */
+@RunWith(DataProviderRunner.class)
 public class TestRestliStreamServerComponent {
 
   private static final String CHARSET = "UTF-8";
   private static final byte[] EMPTY_DATA = new byte[0];
   private RestliServerStreamComponent restliServer;
   private HttpDispatcher _httpDispatcher;
-  @BeforeMethod
+  @Before
   public void setUp() {
     _httpDispatcher = createMock(HttpDispatcher.class);
     restliServer = new RestliServerStreamComponent(_httpDispatcher);
   }
 
-  @Test(dataProvider = "testRemoteAddressData")
-  public void testRemoteAddress(final String remoteAddress)throws Exception {
+  @Test
+  @UseDataProvider("testRemoteAddressData")
+  public void testRemoteAddress(final String remoteAddress) throws Exception {
     Capture<RequestContext> captureContext = newCapture();
     _httpDispatcher.handleRequest(EasyMock.<StreamRequest> anyObject(), capture(captureContext), anyObject());
     expectLastCall();
@@ -62,15 +67,15 @@ public class TestRestliStreamServerComponent {
     assertEquals(remoteAddress, captureContext.getValue().getLocalAttr(R2Constants.REMOTE_ADDR));
   }
 
-  @DataProvider(name = "testRemoteAddressData")
-  private Object[][] testRemoteAddressData(){
+  @DataProvider
+  public static Object[][] testRemoteAddressData(){
     return new String[][]{{"127.0.0.1"}, {null}};
   }
 
   @Test
   public void testCreateRestRequestEmpty() throws Exception {
     Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
-    doCreateStreamRequestTest(request.build(), null, EMPTY_DATA);
+    doCreateStreamRequestTest(request.build(), EMPTY_DATA);
   }
 
   @Test
@@ -89,20 +94,7 @@ public class TestRestliStreamServerComponent {
     doCreateStreamRequestTest(request.build(), data);
   }
 
-  @Test()
-  public void testCreateRestRequestStripContextPath() throws Exception  {
-    Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
-    request.method("PUT");
-    request.uri("/server/foo/bar");
-    request.headers(new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar"))));
-    doCreateStreamRequestTest(request.build(), "/foo/bar", EMPTY_DATA);
-  }
-
   private void doCreateStreamRequestTest(Http.Request request, byte[] data) throws Exception {
-    doCreateStreamRequestTest(request, null, data);
-  }
-
-  private void doCreateStreamRequestTest(Http.Request request, String customUri, byte[] data) throws Exception {
     CompletableFuture<StreamRequest> future = new CompletableFuture<>();
     restliServer.createStreamRequest(request, new Callback<StreamRequest>() {
       @Override
@@ -121,10 +113,9 @@ public class TestRestliStreamServerComponent {
     assertEquals(request.method(), restRequest.getMethod());
     assertEquals(restliServer.toSimpleMap(request.getHeaders().toMap()), restRequest.getHeaders());
 
-    String expectedUri = customUri == null ? request.uri() : customUri;
-    assertEquals(new URI(expectedUri), restRequest.getURI());
+    assertEquals(new URI(request.uri()), restRequest.getURI());
 
-    assertEquals(data, readEntityStream(restRequest.getEntityStream()));
+    assertArrayEquals(data, readEntityStream(restRequest.getEntityStream()));
   }
 
   private byte[] readEntityStream(EntityStream entityStream) {

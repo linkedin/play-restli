@@ -6,13 +6,14 @@ import com.linkedin.r2.message.rest.RestException;
 import com.linkedin.r2.message.rest.RestResponse;
 import com.linkedin.r2.transport.common.bridge.common.TransportResponse;
 import java.util.concurrent.TimeUnit;
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
 
 import java.util.Map;
+import org.junit.Before;
+import org.junit.Test;
 import scala.compat.java8.FutureConverters;
 
-import static org.testng.AssertJUnit.assertEquals;
+import static org.junit.Assert.*;
+
 
 /**
  * Created by rli on 10/14/14.
@@ -25,7 +26,7 @@ public class TestRestliTransportCallback {
   private static final String WIRE_ATTR_KEY = "wireAttrKey";
   private static final String WIRE_ATTR_VALUE = "wireAttrValue";
 
-  @BeforeMethod
+  @Before
   public void setUp() throws Exception {
     callback = new RestliTransportCallback();
   }
@@ -56,7 +57,7 @@ public class TestRestliTransportCallback {
       assertEquals(expected.getValue(), response.getHeaders().get(expected.getKey()));
     }
     assertEquals(WIRE_ATTR_VALUE, response.getHeaders().get(WIRE_ATTR_HEADER_KEY));
-    assertEquals(restResponse.getEntity().copyBytes(), response.getBody());
+    assertArrayEquals(restResponse.getEntity().copyBytes(), response.getBody());
   }
 
   @Test
