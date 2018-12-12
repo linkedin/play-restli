@@ -9,9 +9,9 @@ stages:
 
 jobs:
   include:
-    - name: "sbt-plugin [sbt 0.13]"
+    - name: "sbt-play-restli [sbt 0.13]"
       script: sbt ++2.10.7 ^^0.13.17 sbtPlayRestli/scripted
-    - name: "sbt-plugin [sbt 1.x]"
+    - name: "sbt-play-restli [sbt 1.x]"
       script: sbt ++2.12.7 ^^1.2.6 sbtPlayRestli/scripted
     - name: "play-restli [scala 2.11]"
       script: sbt ++2.11.12 playRestli/test
