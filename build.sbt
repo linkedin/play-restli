@@ -10,7 +10,8 @@ inThisBuild(Seq(
   developers := List(Developer("TylerHorth", "Tyler Horth", "tylerhorth@outlook.com", url("https://github.com/TylerHorth"))),
   organization := "com.linkedin.play-restli",
   pgpPublicRing := file("./travis/local.pubring.asc"),
-  pgpSecretRing := file("./travis/local.secring.asc")
+  pgpSecretRing := file("./travis/local.secring.asc"),
+  resolvers += Resolver.sonatypeRepo("releases")
 ))
 
 lazy val playRestli = (project in file("play-restli"))
