@@ -45,7 +45,6 @@ lazy val sbtPlayRestli = (project in file("sbt-play-restli"))
     releaseEarlyEnableSyncToMaven := false,
     bintrayOrganization := Some("play-restli"),
     releaseEarlyWith := BintrayPublisher,
-    resolvers += Resolver.sonatypeRepo("releases"),
     addSbtPlugin("com.linkedin.sbt-restli" % "sbt-restli" % "0.3.9" % Provided),
     addSbtPlugin("com.typesafe.play" % "sbt-plugin" % playVersion % Provided)
   )
