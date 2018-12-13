@@ -14,7 +14,7 @@ addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "<version>")
 
 Usage
 -----
-> See [sbt-restli](https://github.com/TylerHorth/sbt-restli) for detailed instructions on setting up a rest.li project using sbt.
+> See [sbt-restli](https://github.com/linkedin/sbt-restli) for detailed instructions on setting up a rest.li project using sbt.
 
 Apply your preferred play plugin (PlayService, PlayJava, or PlayScala) to your server project alongside the RestliModelPlugin.
 
