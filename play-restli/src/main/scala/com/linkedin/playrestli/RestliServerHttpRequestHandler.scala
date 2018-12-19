@@ -35,6 +35,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
                                                 router: Router,
                                                 errorHandler: HttpErrorHandler,
                                                 httpConfig: HttpConfiguration,
+                                                javaHttpFilters: play.http.HttpFilters,
                                                 httpFilters: HttpFilters,
                                                 components: JavaHandlerComponents,
                                                 playBodyParsers: PlayBodyParsers,
@@ -72,7 +73,9 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
       if (request.attrs.contains(RestliRequest)) {
         super.filterAction(next)(request)
       } else {
-        val frontendFilters = httpFilters match {
+        // We use javaHttpFilters here since the scala version will be wrapped in a JavaHttpFiltersAdapter by play,
+        // erasing the WithFrontendFilters interface.
+        val frontendFilters = javaHttpFilters match {
           case wff: WithFrontendFilters => wff.getFrontendFilters.asScala
           case _ => httpFilters.filters
         }
