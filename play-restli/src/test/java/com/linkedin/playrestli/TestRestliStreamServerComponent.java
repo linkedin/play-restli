@@ -3,7 +3,6 @@ package com.linkedin.playrestli;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.linkedin.common.callback.Callback;
 import com.linkedin.data.ByteString;
 import com.linkedin.r2.filter.R2Constants;
 import com.linkedin.r2.message.RequestContext;
@@ -14,6 +13,7 @@ import com.linkedin.r2.message.stream.entitystream.ReadHandle;
 import com.linkedin.r2.message.stream.entitystream.Reader;
 import com.linkedin.r2.message.stream.entitystream.WriteHandle;
 import com.linkedin.r2.message.stream.entitystream.Writer;
+import com.linkedin.r2.transport.common.bridge.common.TransportCallback;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import com.tngtech.java.junit.dataprovider.DataProvider;
 import com.tngtech.java.junit.dataprovider.DataProviderRunner;
@@ -22,12 +22,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.util.concurrent.CompletableFuture;
+import java.util.List;
+import java.util.Map;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import play.api.http.CookiesConfiguration;
 import play.libs.Json;
 import play.mvc.Http;
 
@@ -49,7 +51,7 @@ public class TestRestliStreamServerComponent {
   @Before
   public void setUp() {
     _httpDispatcher = createMock(HttpDispatcher.class);
-    restliServer = new RestliServerStreamComponent(_httpDispatcher);
+    restliServer = new RestliServerStreamComponent(_httpDispatcher, CookiesConfiguration.apply(true));
   }
 
   @Test
@@ -95,23 +97,21 @@ public class TestRestliStreamServerComponent {
   }
 
   private void doCreateStreamRequestTest(Http.Request request, byte[] data) throws Exception {
-    CompletableFuture<StreamRequest> future = new CompletableFuture<>();
-    restliServer.createStreamRequest(request, new Callback<StreamRequest>() {
-      @Override
-      public void onError(Throwable e) {
-        future.completeExceptionally(e);
-      }
+    Capture<StreamRequest> captureStreamRequest = newCapture();
+    _httpDispatcher.handleRequest(capture(captureStreamRequest), anyObject(RequestContext.class), anyObject(TransportCallback.class));
+    expectLastCall();
+    replay(_httpDispatcher);
 
-      @Override
-      public void onSuccess(StreamRequest result) {
-        future.complete(result);
-      }
-    });
+    restliServer.handleRequest(request, new RestliStreamTransportCallback());
+    verify(_httpDispatcher);
 
-    StreamRequest restRequest = future.join();
+    StreamRequest restRequest = captureStreamRequest.getValue();
 
     assertEquals(request.method(), restRequest.getMethod());
-    assertEquals(restliServer.toSimpleMap(request.getHeaders().toMap()), restRequest.getHeaders());
+
+    for (Map.Entry<String, List<String>> entry : request.getHeaders().toMap().entrySet()) {
+      assertEquals(entry.getValue(), restRequest.getHeaderValues(entry.getKey()));
+    }
 
     assertEquals(new URI(request.uri()), restRequest.getURI());
 

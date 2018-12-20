@@ -6,12 +6,11 @@ import com.linkedin.r2.message.Request;
 import com.linkedin.r2.message.RequestContext;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import java.net.URI;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
+import play.api.http.CookiesConfiguration;
+import play.core.netty.utils.ClientCookieEncoder;
 import play.mvc.Http;
 
 
@@ -20,40 +19,34 @@ import play.mvc.Http;
  */
 public abstract class BaseRestliServerComponent<T extends Request> {
   protected final HttpDispatcher _restliDispatcher;
+  private final ClientCookieEncoder _cookieEncoder;
 
-  protected BaseRestliServerComponent(HttpDispatcher restliDispatcher) {
+  protected BaseRestliServerComponent(HttpDispatcher restliDispatcher, CookiesConfiguration cookiesConfiguration) {
     _restliDispatcher = restliDispatcher;
-  }
-
-  /**
-   * Transform the request headers to a Map by ignoring multiple values.
-   */
-  protected Map<String, String> toSimpleMap(Map<String, List<String>> map) {
-    Map<String, String> result = new HashMap<>();
-    for (Map.Entry<String, List<String>> entry : map.entrySet()) {
-      String commaSeparatedValues = StringUtils.join(entry.getValue(), ",");
-      result.put(entry.getKey(), commaSeparatedValues);
-    }
-    return result;
+    _cookieEncoder = cookiesConfiguration.clientEncoder();
   }
 
   protected <B extends BaseRequestBuilder<B>> B createRequestBuilder(
       Http.Request request, Function<URI, B> createBuilder) throws Exception {
-
-
     B builder = createBuilder.apply(new URI(request.uri()));
-    Map<String, List<String>> headers = request.getHeaders().toMap();
-
     builder.setMethod(request.method());
-    Map<Boolean, List<Map.Entry<String, List<String>>>> cookiesVsHeaders = headers.entrySet().stream()
-        .collect(Collectors
-            .partitioningBy(entry -> Http.HeaderNames.COOKIE.toLowerCase().equals(entry.getKey().toLowerCase())));
-    builder.setCookies(cookiesVsHeaders.get(true).stream()
-        .map(Map.Entry::getValue)
-        .flatMap(List::stream)
-        .collect(Collectors.toList()));
-    builder.setHeaders(toSimpleMap(cookiesVsHeaders.get(false).stream()
-        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue))));
+
+    for (Map.Entry<String, List<String>> header : request.getHeaders().toMap().entrySet()) {
+      String key = header.getKey();
+
+      if (key.equalsIgnoreCase(Http.HeaderNames.COOKIE)) {
+        continue; // Cookie header and request.cookies may be out of sync; request.cookies is the source of truth.
+      }
+
+      for (String value : header.getValue()) {
+        builder.addHeaderValue(key, value);
+      }
+    }
+
+    for (Http.Cookie cookie : request.cookies()) {
+      builder.addCookie(_cookieEncoder.encode(cookie.name(), cookie.value()));
+    }
+
     return builder;
   }
 
