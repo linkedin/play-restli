@@ -12,7 +12,7 @@ public class DefaultRestliConfigProvider implements RestliConfigProvider {
   private RestLiConfig restliConfig;
 
   @Inject
-  DefaultRestliConfigProvider(Config playConfig) {
+  public DefaultRestliConfigProvider(Config playConfig) {
     restliConfig = new RestLiConfig();
 
     List<String> resourcePackages = playConfig.getStringList("restli.resourcePackages");

@@ -18,7 +18,7 @@ public class DefaultHttpDispatcherProvider implements HttpDispatcherProvider {
   private HttpDispatcher httpDispatcher;
 
   @Inject
-  DefaultHttpDispatcherProvider(
+  public DefaultHttpDispatcherProvider(
       Config config,
       RestLiConfig restLiConfig,
       ResourceFactory resourceFactory,
