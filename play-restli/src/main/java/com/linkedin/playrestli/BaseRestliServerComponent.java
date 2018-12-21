@@ -6,8 +6,6 @@ import com.linkedin.r2.message.Request;
 import com.linkedin.r2.message.RequestContext;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import java.net.URI;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 import play.api.http.CookiesConfiguration;
 import play.core.netty.utils.ClientCookieEncoder;
@@ -31,21 +29,18 @@ public abstract class BaseRestliServerComponent<T extends Request> {
     B builder = createBuilder.apply(new URI(request.uri()));
     builder.setMethod(request.method());
 
-    for (Map.Entry<String, List<String>> header : request.getHeaders().toMap().entrySet()) {
-      String key = header.getKey();
+    request.getHeaders().toMap().entrySet().stream()
+        // Cookie header and request.cookies may be out of sync; request.cookies is the source of truth.
+        .filter(entry -> !entry.getKey().equalsIgnoreCase(Http.HeaderNames.COOKIE))
+        .forEach(entry ->
+            entry.getValue().forEach(value ->
+                builder.addHeaderValue(entry.getKey(), value)
+            )
+        );
 
-      if (key.equalsIgnoreCase(Http.HeaderNames.COOKIE)) {
-        continue; // Cookie header and request.cookies may be out of sync; request.cookies is the source of truth.
-      }
-
-      for (String value : header.getValue()) {
-        builder.addHeaderValue(key, value);
-      }
-    }
-
-    for (Http.Cookie cookie : request.cookies()) {
-      builder.addCookie(_cookieEncoder.encode(cookie.name(), cookie.value()));
-    }
+    request.cookies().forEach(cookie ->
+        builder.addCookie(_cookieEncoder.encode(cookie.name(), cookie.value()))
+    );
 
     return builder;
   }
