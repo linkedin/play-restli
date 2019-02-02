@@ -28,6 +28,8 @@ import scala.concurrent.Promise;
  */
 public abstract class BaseRestliTransportCallback<T extends Response, P extends BaseGenericResponse<B>, B> implements
                                                                                                            TransportCallback<T> {
+  private static final Logger.ALogger LOGGER = Logger.of(BaseRestliTransportCallback.class);
+
   private static final Charset CHARSET = Charset.forName("UTF-8");
 
   protected final Promise<P> _promise = Futures.promise();
@@ -78,7 +80,7 @@ public abstract class BaseRestliTransportCallback<T extends Response, P extends 
         FullEntityReader reader = new FullEntityReader(new Callback<ByteString>() {
           @Override
           public void onError(Throwable e) {
-            Logger.error("Failed to read the entity stream.", e);
+            LOGGER.error("Failed to read the entity stream.", e);
             dataFuture.complete(ByteString.empty());
           }
 
@@ -104,7 +106,7 @@ public abstract class BaseRestliTransportCallback<T extends Response, P extends 
     String errorMessage = textValue == null ? "Unspecified Rest.li error" : textValue;
 
     if (response.getStatus() >= 500) {
-      Logger.error(String.format("Rest.li returned a %d response code: %s", response.getStatus(), errorMessage));
+      LOGGER.error(String.format("Rest.li returned a %d response code: %s", response.getStatus(), errorMessage));
     }
 
     Map<String, String> allHeaders = ImmutableMap.<String, String>builder().putAll(WireAttributeHelper.toWireAttributes(wireAttrs))
