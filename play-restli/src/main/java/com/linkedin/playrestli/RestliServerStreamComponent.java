@@ -9,6 +9,7 @@ import com.linkedin.r2.transport.common.bridge.common.TransportResponseImpl;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import play.api.http.CookiesConfiguration;
 import play.mvc.Http;
 
 
@@ -22,8 +23,8 @@ import play.mvc.Http;
 @Singleton
 public class RestliServerStreamComponent extends BaseRestliServerComponent<StreamRequest> implements RestliServerStreamApi {
   @Inject
-  public RestliServerStreamComponent(HttpDispatcher httpDispatcher) {
-    super(httpDispatcher);
+  public RestliServerStreamComponent(HttpDispatcher httpDispatcher, CookiesConfiguration cookiesConfiguration) {
+    super(httpDispatcher, cookiesConfiguration);
   }
 
   /**

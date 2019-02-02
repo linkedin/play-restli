@@ -12,11 +12,14 @@ import com.tngtech.java.junit.dataprovider.DataProviderRunner;
 import com.tngtech.java.junit.dataprovider.UseDataProvider;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.util.List;
+import java.util.Map;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import play.api.http.CookiesConfiguration;
 import play.libs.Json;
 import play.mvc.Http;
 
@@ -38,7 +41,7 @@ public class TestRestliServerComponent {
   @Before
   public void setUp() {
     _httpDispatcher = createMock(HttpDispatcher.class);
-    restliServer = new RestliServerComponent(_httpDispatcher);
+    restliServer = new RestliServerComponent(_httpDispatcher, CookiesConfiguration.apply(true));
   }
 
   @Test
@@ -82,10 +85,21 @@ public class TestRestliServerComponent {
   }
 
   private void doCreateRestRequestTest(Http.Request request) throws Exception {
-    RestRequest restRequest = restliServer.createRestRequest(request);
+    Capture<RestRequest> captureRestRequest = newCapture();
+    _httpDispatcher.handleRequest(capture(captureRestRequest), anyObject(RequestContext.class), anyObject(RestliTransportCallback.class));
+    expectLastCall();
+    replay(_httpDispatcher);
+
+    restliServer.handleRequest(request, new RestliTransportCallback());
+    verify(_httpDispatcher);
+
+    RestRequest restRequest = captureRestRequest.getValue();
 
     assertEquals(request.method(), restRequest.getMethod());
-    assertEquals(restliServer.toSimpleMap(request.getHeaders().toMap()), restRequest.getHeaders());
+
+    for (Map.Entry<String, List<String>> entry : request.getHeaders().toMap().entrySet()) {
+      assertEquals(entry.getValue(), restRequest.getHeaderValues(entry.getKey()));
+    }
 
     assertEquals(new URI(request.uri()), restRequest.getURI());
 
