@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
-import scala.compat.java8.FutureConverters;
 
 import static org.junit.Assert.*;
 
@@ -65,7 +64,7 @@ public class TestRestliStreamTransportCallback {
 
   private void doRestliSuccessToPromiseTest(MockStreamResponse restResponse) throws Exception {
     callback.onResponse(createTransportResponse(restResponse));
-    GenericStreamResponse response = FutureConverters.toJava(callback.getPromise().future()).toCompletableFuture().get(1000L, TimeUnit.MILLISECONDS);
+    GenericStreamResponse response = callback.getCompletableFuture().get(1000L, TimeUnit.MILLISECONDS);
     assertEquals(restResponse.getStatus(), response.getStatus());
     for (Map.Entry<String, String> expected: restResponse.getHeaders().entrySet()) {
       assertEquals(expected.getValue(), response.getHeaders().get(expected.getKey()));
@@ -93,7 +92,7 @@ public class TestRestliStreamTransportCallback {
   public void testRestliErrorToPromiseNonRestliException() {
     final RuntimeException expected = new RuntimeException();
     callback.onResponse(createTransportResponse(expected));
-    FutureConverters.toJava(callback.getPromise().future()).exceptionally(throwable -> {
+    callback.getCompletableFuture().exceptionally(throwable -> {
       assertEquals(expected, throwable);
       return null;
     });
@@ -117,7 +116,7 @@ public class TestRestliStreamTransportCallback {
     RestResponse restResponse = new MockRestResponse().withStatus(status).withEntity(entity);
     RestException exception = new RestException(restResponse);
     callback.onResponse(createTransportResponse(exception));
-    GenericStreamResponse response = FutureConverters.toJava(callback.getPromise().future()).toCompletableFuture().get(1000L, TimeUnit.MILLISECONDS);
+    GenericStreamResponse response = callback.getCompletableFuture().get(1000L, TimeUnit.MILLISECONDS);
     assertEquals(status, response.getStatus());
     assertEquals(message, response.getHeaders().get(RestliConstants.RESTLI_ERROR_HEADER));
     assertEquals(WIRE_ATTR_VALUE, response.getHeaders().get(WIRE_ATTR_HEADER_KEY));

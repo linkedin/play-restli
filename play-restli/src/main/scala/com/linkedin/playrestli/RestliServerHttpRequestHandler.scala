@@ -21,6 +21,7 @@ import play.mvc.Http.{RawBuffer, RequestBody}
 import play.utils.Threads
 
 import scala.collection.JavaConverters._
+import scala.compat.java8.FutureConverters
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
 /** Created by rli on 2/16/16.
@@ -193,7 +194,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
   )
 
   private def buildResult[T](callback: BaseRestliTransportCallback[_, _ <: BaseGenericResponse[T], T], addBody: (Results.Status, T) => Result) = {
-    callback.getPromise.future.map { response =>
+    FutureConverters.toScala(callback.getCompletableFuture).map { response =>
       // Ensure that we *only* include headers from the RestResponse and not any that the Play Status object may add by default
       val result = addBody(Results.Status(response.getStatus), response.getBody)
       // Purposely parse the set-cookie header again to protected against the case

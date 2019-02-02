@@ -1,6 +1,5 @@
 package com.linkedin.playrestli;
 
-import akka.dispatch.Futures;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import com.linkedin.common.callback.Callback;
@@ -20,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import play.Logger;
 import play.libs.Json;
-import scala.concurrent.Promise;
 
 
 /**
@@ -32,50 +30,50 @@ public abstract class BaseRestliTransportCallback<T extends Response, P extends 
 
   private static final Charset CHARSET = Charset.forName("UTF-8");
 
-  protected final Promise<P> _promise = Futures.promise();
+  protected final CompletableFuture<P> _completableFuture = new CompletableFuture<>();
 
-  public Promise<P> getPromise() {
-    return _promise;
+  public CompletableFuture<P> getCompletableFuture() {
+    return _completableFuture;
   }
 
   @Override
   public void onResponse(TransportResponse<T> response) {
-    redeemPromiseWithRestliResponse(_promise, response);
+    redeemCompletableFutureWithRestliResponse(_completableFuture, response);
   }
 
   /**
-   * Convert the given rest.li response to a Play Result Promise. This method will convert rest.li errors, status
+   * Convert the given rest.li response to a Play Result CompletableFuture. This method will convert rest.li errors, status
    * codes, and data into a format Play can use for a Result.
    *
    * @param response
    */
-  private void redeemPromiseWithRestliResponse(Promise<P> promise, TransportResponse<T> response) {
+  private void redeemCompletableFutureWithRestliResponse(CompletableFuture<P> completableFuture, TransportResponse<T> response) {
     if (response.hasError()) {
-      redeemPromiseWithRestliError(promise, response.getError(), response.getWireAttributes());
+      redeemCompletableFutureWithRestliError(completableFuture, response.getError(), response.getWireAttributes());
     } else {
-      redeemPromiseWithRestliSuccess(promise, response.getResponse(), response.getWireAttributes());
+      redeemCompletableFutureWithRestliSuccess(completableFuture, response.getResponse(), response.getWireAttributes());
     }
   }
 
-  private void redeemPromiseWithRestliSuccess(Promise<P> promise, T response, Map<String, String> wireAttrs) {
+  private void redeemCompletableFutureWithRestliSuccess(CompletableFuture<P> completableFuture, T response, Map<String, String> wireAttrs) {
     Map<String, String> allHeaders = ImmutableMap.<String, String>builder()
         .putAll(WireAttributeHelper.toWireAttributes(wireAttrs))
         .putAll(response.getHeaders())
         .build();
-    promise.success(createResponse(response.getStatus(), allHeaders, response.getCookies(), response));
+    completableFuture.complete(createResponse(response.getStatus(), allHeaders, response.getCookies(), response));
   }
 
   protected abstract P createResponse(int status, Map<String, String> headers, List<String> cookies, T response);
 
   protected abstract P createErrorResponse(int status, Map<String, String> headers);
 
-  private void redeemPromiseWithRestliError(Promise<P> promise,
+  private void redeemCompletableFutureWithRestliError(CompletableFuture<P> completableFuture,
       Throwable error,
       Map<String, String> wireAttrs) {
     if (error instanceof RestException) {
-      redeemPromiseWithRestliError(promise, ((RestException) error).getResponse(), wireAttrs, RestResponse::getEntity);
+      redeemCompletableFutureWithRestliError(completableFuture, ((RestException) error).getResponse(), wireAttrs, RestResponse::getEntity);
     } else if (error instanceof StreamException) {
-      redeemPromiseWithRestliError(promise, ((StreamException) error).getResponse(), wireAttrs, response -> {
+      redeemCompletableFutureWithRestliError(completableFuture, ((StreamException) error).getResponse(), wireAttrs, response -> {
         CompletableFuture<ByteString> dataFuture = new CompletableFuture<>();
         FullEntityReader reader = new FullEntityReader(new Callback<ByteString>() {
           @Override
@@ -93,11 +91,11 @@ public abstract class BaseRestliTransportCallback<T extends Response, P extends 
         return dataFuture.join();
       });
     } else {
-      promise.failure(error);
+      completableFuture.completeExceptionally(error);
     }
   }
 
-  private <T extends Response> void redeemPromiseWithRestliError(Promise<P> promise,
+  private <T extends Response> void redeemCompletableFutureWithRestliError(CompletableFuture<P> completableFuture,
       T response,
       Map<String, String> wireAttrs,
       Function<T, ByteString> getEntity) {
@@ -112,6 +110,6 @@ public abstract class BaseRestliTransportCallback<T extends Response, P extends 
     Map<String, String> allHeaders = ImmutableMap.<String, String>builder().putAll(WireAttributeHelper.toWireAttributes(wireAttrs))
         .put(RestliConstants.RESTLI_ERROR_HEADER, errorMessage)
         .build();
-    promise.success(createErrorResponse(response.getStatus(), allHeaders));
+    completableFuture.complete(createErrorResponse(response.getStatus(), allHeaders));
   }
 }
