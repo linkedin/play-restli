@@ -4,6 +4,7 @@ import com.linkedin.r2.filter.R2Constants;
 import com.linkedin.r2.message.BaseRequestBuilder;
 import com.linkedin.r2.message.Request;
 import com.linkedin.r2.message.RequestContext;
+import com.linkedin.r2.transport.http.common.HttpProtocolVersion;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import java.net.URI;
 import java.util.function.Function;
@@ -56,6 +57,7 @@ public abstract class BaseRestliServerComponent<T extends Request> {
     if (remoteAddress != null) {
       requestContext.putLocalAttr(R2Constants.REMOTE_ADDR, remoteAddress);
     }
+    requestContext.putLocalAttr(R2Constants.HTTP_PROTOCOL_VERSION, HttpProtocolVersion.parse(request.version()));
     if (request.secure()) {
       request.clientCertificateChain().ifPresent(chain -> {
         if (!chain.isEmpty()) {
