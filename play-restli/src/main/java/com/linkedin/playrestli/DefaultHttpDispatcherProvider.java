@@ -28,7 +28,7 @@ public class DefaultHttpDispatcherProvider implements HttpDispatcherProvider {
     RestLiServer restLiServer = new RestLiServer(restLiConfig, resourceFactory, engine);
     httpDispatcher = new HttpDispatcher(
         new FilterChainDispatcher(
-            new PlayContextDispatcher(
+            new UriStripTransportDispatcher(
                 httpConfiguration.context(),
                 new DelegatingTransportDispatcher(restLiServer, restLiServer)
             ), filterChain));
