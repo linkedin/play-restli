@@ -9,22 +9,22 @@ import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import com.linkedin.restli.server.RestLiConfig;
 import com.linkedin.restli.server.resources.ResourceFactory;
 import com.typesafe.config.Config;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.inject.Provider;
-import play.api.Configuration;
-import play.api.Environment;
-import play.api.inject.Binding;
-import play.api.inject.Module;
-import scala.collection.Seq;
+import play.Environment;
+import play.inject.Binding;
+import play.inject.Module;
+
 
 public class RestliServerModule extends Module {
-  private Config config;
-  private ClassLoader classLoader;
+  private Config _restliConfig;
+  private ClassLoader _classLoader;
 
   private <T> Class<? extends T> loadClass(Class<T> base, String subclass) {
     try {
-      return classLoader.loadClass(subclass).asSubclass(base);
+      return _classLoader.loadClass(subclass).asSubclass(base);
     } catch (ClassNotFoundException ex) {
       throw new RuntimeException(ex);
     }
@@ -39,32 +39,32 @@ public class RestliServerModule extends Module {
   }
 
   private <T> List<T> collectInstances(Class<T> base, String path) {
-    return config.getStringList(path).stream()
+    return _restliConfig.getStringList(path).stream()
         .map(klass -> newInstance(base, klass))
         .collect(Collectors.toList());
   }
 
   private <T> Binding<T> dynBinding(Class<T> from, String to) {
-    return bind(from).to(loadClass(from, config.getString(to)));
+    return bindClass(from).to(loadClass(from, _restliConfig.getString(to)));
   }
 
   private <T> Binding<T> dynProvider(Class<T> from, Class<? extends Provider<T>> provider, String to) {
-    return bind(from).toProvider(loadClass(provider, config.getString(to)));
+    return bindClass(from).toProvider(loadClass(provider, _restliConfig.getString(to)));
   }
 
   @Override
-  public Seq<Binding<?>> bindings(Environment environment, Configuration configuration) {
-    config = configuration.underlying().getConfig("restli");
-    classLoader = environment.classLoader();
+  public List<Binding<?>> bindings(Environment environment, Config config) {
+    _restliConfig = config.getConfig("restli");
+    _classLoader = environment.classLoader();
 
     List<RestFilter> restFilters = collectInstances(RestFilter.class, "rest.filters");
     List<StreamFilter> streamFilters = collectInstances(StreamFilter.class, "stream.filters");
     FilterChain filterChain = FilterChains.create(restFilters, streamFilters);
 
-    return seq(
+    return Arrays.asList(
         dynBinding(RestliServerApi.class, "rest.server"),
         dynBinding(RestliServerStreamApi.class, "stream.server"),
-        bind(FilterChain.class).toInstance(filterChain),
+        bindClass(FilterChain.class).toInstance(filterChain),
         dynBinding(ResourceFactory.class, "resourceFactory"),
         dynProvider(Engine.class, EngineProvider.class, "engineProvider"),
         dynProvider(RestLiConfig.class, RestliConfigProvider.class, "configProvider"),
