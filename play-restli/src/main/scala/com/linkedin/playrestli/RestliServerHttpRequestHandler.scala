@@ -40,17 +40,27 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
                                                 httpFilters: HttpFilters,
                                                 components: JavaHandlerComponents,
                                                 playBodyParsers: PlayBodyParsers,
-                                                actionBuilder: DefaultActionBuilder
+                                                actionBuilder: DefaultActionBuilder,
+                                                cookieHeaderEncoding: CookieHeaderEncoding
                                                )(implicit ec: ExecutionContext)
   extends JavaCompatibleHttpRequestHandler(router, errorHandler, httpConfig, httpFilters, components) {
 
-  private val memoryThresholdBytes: Long = configuration.underlying.getBytes("restli.memoryThresholdBytes")
+  private val memoryThresholdBytes: Int = {
+    if (configuration.has("restli.memoryThresholdBytes")) {
+      val bytes: Long = configuration.underlying.getBytes("restli.memoryThresholdBytes")
+      if (bytes.isValidInt) {
+        bytes.toInt
+      } else {
+        throw new IllegalArgumentException("restli.memoryThresholdBytes not a valid 32bit integer.")
+      }
+    } else {
+      Int.MaxValue
+    }
+  }
   private val SupportedRestliMethods = Set("GET", "POST", "PUT", "PATCH", "HEAD", "DELETE", "OPTIONS")
-  private val useStream: Boolean = configuration.get[Boolean]("restli.useStream")
-  private val applyFiltersGlobally: Boolean = configuration.get[Boolean]("restli.applyFiltersGlobally")
+  private val useStream: Boolean = configuration.getOptional[Boolean]("restli.useStream").getOrElse(false)
+  private val applyFiltersGlobally: Boolean = configuration.getOptional[Boolean]("restli.applyFiltersGlobally").getOrElse(false)
   private val RestliRequest: TypedKey[Unit] = TypedKey("restliRequest")
-
-  require(memoryThresholdBytes.isValidInt, "restli.memoryThresholdBytes not a valid 32bit integer.")
 
   private class RestliRequestStage(handler: Handler) extends Handler.Stage {
     override def apply(requestHeader: RequestHeader): (RequestHeader, Handler) = {
@@ -59,6 +69,9 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
   }
 
   override def filterHandler(request: RequestHeader, handler: Handler): Handler = {
+    // TODO - Due to https://github.com/playframework/playframework/pull/2886 the filter chain is only applied
+    // to requests that match the context path. We should submit a pull request to either make the inContext
+    // definition overrideable, or configure whether the inContext check is done via config
     if (applyFiltersGlobally) {
       handler match {
         case action: EssentialAction => filterAction(action)
@@ -86,7 +99,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
   }
 
   private def restliRequestHandler: Handler = new RestliRequestStage(
-    actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes.toInt)) { scalaRequest =>
+    actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes)) { scalaRequest =>
       val javaContext = createJavaContext(scalaRequest.map(data => new RequestBody(new RawBuffer {
         override def size(): java.lang.Long = data.size.toLong
 
@@ -200,12 +213,13 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
       // Purposely parse the set-cookie header again to protected against the case
       // where intermediate filter accidentally generate ill-formed cookie headers.
       val cookies = response.getCookies.asScala.foldLeft(Seq.empty[Cookie]){ (cookies, cookieHeader) =>
-        cookies ++ Cookies.fromSetCookieHeader(Option(cookieHeader)).toSeq
+        cookies ++ cookieHeaderEncoding.fromSetCookieHeader(Option(cookieHeader)).toSeq
       }
-      val contentType = Option(response.getHeaders.get(HeaderNames.CONTENT_TYPE))
       // Setting result header Content-Type no longer takes effect. The type has to be set at the result directly.
       val resultCopy = result.copy(header = result.header.copy(headers = response.getHeaders.asScala.filter(_._1 != HeaderNames.CONTENT_TYPE).toMap)).withCookies(cookies:_*)
-      contentType.map(resultCopy.as).getOrElse(resultCopy)
+      // TODO - change this to resultCopy.as once https://github.com/playframework/playframework/issues/8713 is fixed,
+      // where Result.as can take null content-type.
+      Option(response.getHeaders.get(HeaderNames.CONTENT_TYPE)).map(resultCopy.as).getOrElse(resultCopy)
     }
   }
 
