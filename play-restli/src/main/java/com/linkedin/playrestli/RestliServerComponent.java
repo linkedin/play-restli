@@ -3,10 +3,12 @@ package com.linkedin.playrestli;
 import com.linkedin.r2.message.QueryTunnelUtil;
 import com.linkedin.r2.message.rest.RestRequest;
 import com.linkedin.r2.message.rest.RestRequestBuilder;
+import com.linkedin.r2.transport.common.bridge.common.TransportResponseImpl;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import play.api.http.CookiesConfiguration;
+import play.api.http.HttpConfiguration;
 import play.mvc.Http;
 
 
@@ -21,8 +23,9 @@ import play.mvc.Http;
 public class RestliServerComponent extends BaseRestliServerComponent<RestRequest> implements RestliServerApi {
 
   @Inject
-  public RestliServerComponent(HttpDispatcher httpDispatcher, CookiesConfiguration cookiesConfiguration) {
-    super(httpDispatcher, cookiesConfiguration);
+  public RestliServerComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,
+      HttpDispatcher httpDispatcher) {
+    super(httpConfiguration, cookiesConfiguration, httpDispatcher);
   }
 
   /**
@@ -31,14 +34,20 @@ public class RestliServerComponent extends BaseRestliServerComponent<RestRequest
   @Override
   public void handleRequest(final Http.Request request, final RestliTransportCallback callback) throws Exception {
     RestRequest restRequest = createRestRequest(request);
-    _restliDispatcher.handleRequest(restRequest, createRequestContext(request), callback);
+    if (restRequest == null) {
+      callback.onResponse(TransportResponseImpl.success(notFound(request.uri())));
+    } else {
+      _restliDispatcher.handleRequest(restRequest, createRequestContext(request), callback);
+    }
   }
 
-
   RestRequest createRestRequest(Http.Request request) throws Exception {
-    RestRequestBuilder builder = createRequestBuilder(request, RestRequestBuilder::new);
-    builder.setEntity(request.body().asRaw().asBytes().toArray());
-
-    return QueryTunnelUtil.decode(builder.build());
+    RestRequestBuilder builder = createRequestBuilder(request, RestRequestBuilder::new).orElse(null);
+    if (builder == null) {
+      return null;
+    } else {
+      builder.setEntity(request.body().asRaw().asBytes().toArray());
+      return QueryTunnelUtil.decode(builder.build());
+    }
   }
 }

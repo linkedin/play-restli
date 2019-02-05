@@ -14,12 +14,14 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import play.api.http.CookiesConfiguration;
+import play.api.http.HttpConfiguration;
 import play.libs.Json;
 import play.mvc.Http;
 
@@ -35,24 +37,28 @@ import static org.junit.Assert.*;
 public class TestRestliServerComponent {
 
   private static final String CHARSET = "UTF-8";
+  private static final String CONTEXT = "/server/";
   private RestliServerComponent restliServer;
   private HttpDispatcher _httpDispatcher;
 
   @Before
   public void setUp() {
+    HttpConfiguration config = createMock(HttpConfiguration.class);
+    expect(config.context()).andReturn(CONTEXT);
+    replay(config);
     _httpDispatcher = createMock(HttpDispatcher.class);
-    restliServer = new RestliServerComponent(_httpDispatcher, CookiesConfiguration.apply(true));
+    restliServer = new RestliServerComponent(config, CookiesConfiguration.apply(true), _httpDispatcher);
   }
 
   @Test
   @UseDataProvider("testRemoteAddressData")
   public void testRemoteAddress(final String remoteAddress) throws Exception {
-    Capture<RequestContext> captureContext  = newCapture();
-    _httpDispatcher.handleRequest(EasyMock.<RestRequest> anyObject(), capture(captureContext), anyObject());
+    Capture<RequestContext> captureContext = newCapture();
+    _httpDispatcher.handleRequest(EasyMock.<RestRequest>anyObject(), capture(captureContext), anyObject());
     expectLastCall();
     replay(_httpDispatcher);
 
-    Http.Request request = new Http.RequestBuilder().remoteAddress(remoteAddress).bodyRaw(new byte[0]).build();
+    Http.Request request = createDefaultRequestBuilder().remoteAddress(remoteAddress).bodyRaw(new byte[0]).build();
     restliServer.handleRequest(request, new RestliTransportCallback());
 
     verify(_httpDispatcher);
@@ -60,33 +66,43 @@ public class TestRestliServerComponent {
   }
 
   @DataProvider
-  public static Object[][] testRemoteAddressData(){
+  public static Object[][] testRemoteAddressData() {
     return new String[][]{{"127.0.0.1"}, {null}};
   }
 
-
   @Test
   public void testCreateRestRequestEmpty() throws Exception {
-    Http.Request request = new Http.RequestBuilder().bodyRaw(new byte[0]).build();
+    Http.Request request = createDefaultRequestBuilder().bodyRaw(new byte[0]).build();
     doCreateRestRequestTest(request);
   }
 
   @Test
   public void testCreateRestRequestWithHeaders() throws Exception {
     Http.Headers headers = new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar")));
-    Http.Request request = new Http.RequestBuilder().method("POST").uri("/foo/bar").headers(headers).bodyRaw(new byte[0]).build();
+    Http.Request request = createDefaultRequestBuilder().method("POST").headers(headers).bodyRaw(new byte[0]).build();
     doCreateRestRequestTest(request);
   }
 
   @Test
   public void testCreateRestRequestWithJsonBody() throws Exception {
-    Http.Request request = new Http.RequestBuilder().bodyRaw(jsonToBytes(Json.toJson(ImmutableMap.of("foo", new String[] {"bar"})))).build();
+    Http.Request request =
+        createDefaultRequestBuilder().bodyRaw(jsonToBytes(Json.toJson(ImmutableMap.of("foo", new String[]{"bar"}))))
+            .build();
+    doCreateRestRequestTest(request);
+  }
+
+  @Test
+  public void testCreateRestRequestStripContextPath() throws Exception {
+    Http.Headers headers = new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar")));
+    Http.Request request =
+        new Http.RequestBuilder().method("PUT").uri("/server/foo/bar").headers(headers).bodyRaw(new byte[0]).build();
     doCreateRestRequestTest(request);
   }
 
   private void doCreateRestRequestTest(Http.Request request) throws Exception {
     Capture<RestRequest> captureRestRequest = newCapture();
-    _httpDispatcher.handleRequest(capture(captureRestRequest), anyObject(RequestContext.class), anyObject(RestliTransportCallback.class));
+    _httpDispatcher.handleRequest(capture(captureRestRequest), anyObject(RequestContext.class),
+        anyObject(RestliTransportCallback.class));
     expectLastCall();
     replay(_httpDispatcher);
 
@@ -101,7 +117,8 @@ public class TestRestliServerComponent {
       assertEquals(entry.getValue(), restRequest.getHeaderValues(entry.getKey()));
     }
 
-    assertEquals(new URI(request.uri()), restRequest.getURI());
+    assertEquals(new URI(StringUtils.removeStart(request.uri(), StringUtils.removeEnd(CONTEXT, "/"))),
+        restRequest.getURI());
 
     String entityString = restRequest.getEntity().asString(CHARSET);
     assertEquals(request.body().asRaw().asBytes().utf8String(), entityString);
@@ -109,5 +126,9 @@ public class TestRestliServerComponent {
 
   private byte[] jsonToBytes(JsonNode json) throws UnsupportedEncodingException {
     return Json.stringify(json).getBytes(CHARSET);
+  }
+
+  private Http.RequestBuilder createDefaultRequestBuilder() {
+    return new Http.RequestBuilder().uri(CONTEXT);
   }
 }

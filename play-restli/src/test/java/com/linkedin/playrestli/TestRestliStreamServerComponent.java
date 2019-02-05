@@ -24,12 +24,14 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import play.api.http.CookiesConfiguration;
+import play.api.http.HttpConfiguration;
 import play.libs.Json;
 import play.mvc.Http;
 
@@ -46,19 +48,24 @@ public class TestRestliStreamServerComponent {
 
   private static final String CHARSET = "UTF-8";
   private static final byte[] EMPTY_DATA = new byte[0];
+  private static final String CONTEXT = "/server/";
   private RestliServerStreamComponent restliServer;
   private HttpDispatcher _httpDispatcher;
+
   @Before
   public void setUp() {
+    HttpConfiguration config = createMock(HttpConfiguration.class);
+    expect(config.context()).andReturn(CONTEXT);
+    replay(config);
     _httpDispatcher = createMock(HttpDispatcher.class);
-    restliServer = new RestliServerStreamComponent(_httpDispatcher, CookiesConfiguration.apply(true));
+    restliServer = new RestliServerStreamComponent(config, CookiesConfiguration.apply(true), _httpDispatcher);
   }
 
   @Test
   @UseDataProvider("testRemoteAddressData")
   public void testRemoteAddress(final String remoteAddress) throws Exception {
     Capture<RequestContext> captureContext = newCapture();
-    _httpDispatcher.handleRequest(EasyMock.<StreamRequest> anyObject(), capture(captureContext), anyObject());
+    _httpDispatcher.handleRequest(EasyMock.<StreamRequest>anyObject(), capture(captureContext), anyObject());
     expectLastCall();
     replay(_httpDispatcher);
 
@@ -70,7 +77,7 @@ public class TestRestliStreamServerComponent {
   }
 
   @DataProvider
-  public static Object[][] testRemoteAddressData(){
+  public static Object[][] testRemoteAddressData() {
     return new String[][]{{"127.0.0.1"}, {null}};
   }
 
@@ -84,21 +91,30 @@ public class TestRestliStreamServerComponent {
   public void testCreateRestRequestWithHeaders() throws Exception {
     Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
     request.method("POST");
-    request.uri("/foo/bar");
     request.headers(new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar"))));
     doCreateStreamRequestTest(request.build(), EMPTY_DATA);
   }
 
   @Test
   public void testCreateRestRequestWithJsonBody() throws Exception {
-    byte[] data = jsonToBytes(Json.toJson(ImmutableMap.of("foo", new String[] {"bar"})));
+    byte[] data = jsonToBytes(Json.toJson(ImmutableMap.of("foo", new String[]{"bar"})));
     Http.RequestBuilder request = createMockRequest(data);
     doCreateStreamRequestTest(request.build(), data);
   }
 
+  @Test
+  public void testCreateRestRequestStripContextPath() throws Exception {
+    Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
+    request.method("PUT");
+    request.uri("/server/foo/bar");
+    request.headers(new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar"))));
+    doCreateStreamRequestTest(request.build(), EMPTY_DATA);
+  }
+
   private void doCreateStreamRequestTest(Http.Request request, byte[] data) throws Exception {
     Capture<StreamRequest> captureStreamRequest = newCapture();
-    _httpDispatcher.handleRequest(capture(captureStreamRequest), anyObject(RequestContext.class), anyObject(TransportCallback.class));
+    _httpDispatcher.handleRequest(capture(captureStreamRequest), anyObject(RequestContext.class),
+        anyObject(TransportCallback.class));
     expectLastCall();
     replay(_httpDispatcher);
 
@@ -113,7 +129,8 @@ public class TestRestliStreamServerComponent {
       assertEquals(entry.getValue(), restRequest.getHeaderValues(entry.getKey()));
     }
 
-    assertEquals(new URI(request.uri()), restRequest.getURI());
+    assertEquals(new URI(StringUtils.removeStart(request.uri(), StringUtils.removeEnd(CONTEXT, "/"))),
+        restRequest.getURI());
 
     assertArrayEquals(data, readEntityStream(restRequest.getEntityStream()));
   }
@@ -123,6 +140,7 @@ public class TestRestliStreamServerComponent {
 
     entityStream.setReader(new Reader() {
       private ReadHandle _readHandle;
+
       @Override
       public void onInit(ReadHandle rh) {
         _readHandle = rh;
@@ -190,6 +208,6 @@ public class TestRestliStreamServerComponent {
         })));
         return super.build();
       }
-    };
+    }.uri(CONTEXT);
   }
 }

@@ -1,15 +1,18 @@
 package com.linkedin.playrestli;
 
 import com.linkedin.common.callback.Callback;
+import com.linkedin.r2.message.Messages;
 import com.linkedin.r2.message.QueryTunnelUtil;
 import com.linkedin.r2.message.stream.StreamRequest;
 import com.linkedin.r2.message.stream.StreamRequestBuilder;
+import com.linkedin.r2.message.stream.entitystream.DrainReader;
 import com.linkedin.r2.message.stream.entitystream.EntityStream;
 import com.linkedin.r2.transport.common.bridge.common.TransportResponseImpl;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import play.api.http.CookiesConfiguration;
+import play.api.http.HttpConfiguration;
 import play.mvc.Http;
 
 
@@ -21,10 +24,12 @@ import play.mvc.Http;
  *
  */
 @Singleton
-public class RestliServerStreamComponent extends BaseRestliServerComponent<StreamRequest> implements RestliServerStreamApi {
+public class RestliServerStreamComponent extends BaseRestliServerComponent<StreamRequest>
+    implements RestliServerStreamApi {
   @Inject
-  public RestliServerStreamComponent(HttpDispatcher httpDispatcher, CookiesConfiguration cookiesConfiguration) {
-    super(httpDispatcher, cookiesConfiguration);
+  public RestliServerStreamComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,
+      HttpDispatcher httpDispatcher) {
+    super(httpConfiguration, cookiesConfiguration, httpDispatcher);
   }
 
   /**
@@ -32,21 +37,31 @@ public class RestliServerStreamComponent extends BaseRestliServerComponent<Strea
    */
   @Override
   public void handleRequest(final Http.Request request, final RestliStreamTransportCallback callback) throws Exception {
-    createStreamRequest(request, new Callback<StreamRequest>() {
-      @Override
-      public void onError(Throwable e) {
-        callback.onResponse(TransportResponseImpl.error(e));
-      }
+    StreamRequest streamRequest = createStreamRequest(request);
+    if (streamRequest == null) {
+      callback.onResponse(TransportResponseImpl.success(Messages.toStreamResponse(notFound(request.uri()))));
+      request.body().as(EntityStream.class).setReader(new DrainReader());
+    } else {
+      QueryTunnelUtil.decode(streamRequest, new Callback<StreamRequest>() {
+        @Override
+        public void onError(Throwable e) {
+          callback.onResponse(TransportResponseImpl.error(e));
+        }
 
-      @Override
-      public void onSuccess(StreamRequest result) {
-        _restliDispatcher.handleRequest(result, createRequestContext(request), callback);
-      }
-    });
+        @Override
+        public void onSuccess(StreamRequest result) {
+          _restliDispatcher.handleRequest(result, createRequestContext(request), callback);
+        }
+      });
+    }
   }
 
-  void createStreamRequest(Http.Request request, Callback<StreamRequest> callback) throws Exception {
-    StreamRequestBuilder builder = createRequestBuilder(request, StreamRequestBuilder::new);
-    QueryTunnelUtil.decode(builder.build(request.body().as(EntityStream.class)), callback);
+  StreamRequest createStreamRequest(Http.Request request) throws Exception {
+    StreamRequestBuilder builder = createRequestBuilder(request, StreamRequestBuilder::new).orElse(null);
+    if (builder == null) {
+      return null;
+    } else {
+      return builder.build(request.body().as(EntityStream.class));
+    }
   }
 }
