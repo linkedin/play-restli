@@ -84,7 +84,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
 
   override def filterAction(next: EssentialAction): EssentialAction = {
     EssentialAction(request =>
-      if (request.attrs.contains(RestliRequest)) {
+      if (isRestLiRequest(request)) {
         super.filterAction(next)(request)
       } else {
         // We use javaHttpFilters here since the scala version will be wrapped in a JavaHttpFiltersAdapter by play,
@@ -97,6 +97,8 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
       }
     )
   }
+
+  def isRestLiRequest(request: RequestHeader): Boolean = request.attrs.contains(RestliRequest)
 
   private def restliRequestHandler: Handler = new RestliRequestStage(
     actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes)) { scalaRequest =>
