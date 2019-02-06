@@ -20,7 +20,7 @@ import play.mvc.Http;
  *
  */
 @Singleton
-public class RestliServerComponent extends BaseRestliServerComponent<RestRequest> implements RestliServerApi {
+public final class RestliServerComponent extends BaseRestliServerComponent<RestRequest> implements RestliServerApi {
 
   @Inject
   public RestliServerComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,

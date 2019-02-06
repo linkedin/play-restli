@@ -24,7 +24,7 @@ import play.mvc.Http;
  *
  */
 @Singleton
-public class RestliServerStreamComponent extends BaseRestliServerComponent<StreamRequest>
+public final class RestliServerStreamComponent extends BaseRestliServerComponent<StreamRequest>
     implements RestliServerStreamApi {
   @Inject
   public RestliServerStreamComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,
