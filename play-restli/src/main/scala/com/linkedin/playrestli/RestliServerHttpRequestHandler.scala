@@ -221,7 +221,12 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
       val resultCopy = result.copy(header = result.header.copy(headers = response.getHeaders.asScala.filter(_._1 != HeaderNames.CONTENT_TYPE).toMap)).withCookies(cookies:_*)
       // TODO - change this to resultCopy.as once https://github.com/playframework/playframework/issues/8713 is fixed,
       // where Result.as can take null content-type.
-      Option(response.getHeaders.get(HeaderNames.CONTENT_TYPE)).map(resultCopy.as).getOrElse(resultCopy)
+      val contentTypeOpt = Option(response.getHeaders.get(HeaderNames.CONTENT_TYPE))
+      resultCopy.copy(body = resultCopy.body match {
+        case strict: HttpEntity.Strict => strict.copy(contentType = contentTypeOpt)
+        case streamed: HttpEntity.Streamed => streamed.copy(contentType = contentTypeOpt)
+        case chunked: HttpEntity.Chunked => chunked.copy(contentType = contentTypeOpt)
+      })
     }
   }
 
