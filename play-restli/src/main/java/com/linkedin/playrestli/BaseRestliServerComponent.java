@@ -9,9 +9,9 @@ import com.linkedin.r2.message.rest.RestStatus;
 import com.linkedin.r2.transport.http.common.HttpProtocolVersion;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.function.Function;
+import javax.ws.rs.core.UriBuilder;
 import org.apache.commons.lang3.StringUtils;
 import play.Logger;
 import play.api.http.CookiesConfiguration;
@@ -90,22 +90,24 @@ public abstract class BaseRestliServerComponent<T extends Request> {
    * Strips scheme and authority parts from URI, also strips Play context from path part, to make URI relative.
    */
   private Optional<URI> stripUri(URI uri) {
-    try {
-      if (_playContext.isEmpty()) {
-        return Optional.of(new URI(null, null, uri.getRawPath(), uri.getRawQuery(), uri.getRawFragment()));
-      }
-      String path = uri.getRawPath();
-      if (path != null && path.startsWith(_playContext) && (path.length() == _playContext.length()
-          || path.charAt(_playContext.length()) == '/')) {
-        return Optional.of(
-            new URI(null, null, path.substring(_playContext.length()), uri.getRawQuery(), uri.getRawFragment()));
-      } else {
-        LOGGER.error("Play context is not leading the path part of the URI: " + uri);
-        return Optional.empty();
-      }
-    } catch (URISyntaxException e) {
-      LOGGER.error("Unable to construct URI from the original URI: " + uri, e);
+    if (_playContext.isEmpty()) {
+      return Optional.of(stripSchemeAuthority(UriBuilder.fromUri(uri)));
+    }
+    String path = uri.getRawPath();
+    if (path != null && path.startsWith(_playContext) && (path.length() == _playContext.length()
+        || path.charAt(_playContext.length()) == '/')) {
+      return Optional.of(
+          stripSchemeAuthority(UriBuilder.fromUri(uri).replacePath(path.substring(_playContext.length()))));
+    } else {
+      LOGGER.error("Play context is not leading the path part of the URI: " + uri);
       return Optional.empty();
     }
+  }
+
+  /**
+   * Strips scheme and authority parts from URI.
+   */
+  private URI stripSchemeAuthority(UriBuilder uriBuilder) {
+    return uriBuilder.scheme(null).userInfo(null).host(null).port(-1).build();
   }
 }

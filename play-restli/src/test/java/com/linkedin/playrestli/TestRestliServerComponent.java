@@ -92,10 +92,24 @@ public class TestRestliServerComponent {
   }
 
   @Test
-  public void testCreateRestRequestStripContextPath() throws Exception {
+  public void testCreateRestRequestStripUri() throws Exception {
     Http.Headers headers = new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar")));
-    Http.Request request =
-        new Http.RequestBuilder().method("PUT").uri("/server/foo/bar").headers(headers).bodyRaw(new byte[0]).build();
+    Http.Request request = new Http.RequestBuilder().method("PUT")
+        .uri("http://user@localhost:9000" + CONTEXT + "foo/bar")
+        .headers(headers)
+        .bodyRaw(new byte[0])
+        .build();
+    doCreateRestRequestTest(request);
+  }
+
+  @Test
+  public void testCreateRestRequestStripUriEncoded() throws Exception {
+    Http.Headers headers = new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar")));
+    Http.Request request = new Http.RequestBuilder().method("PUT")
+        .uri("http://user@localhost:9000" + CONTEXT + "foo/%28bar%29?test=%28test%29#%28test%29")
+        .headers(headers)
+        .bodyRaw(new byte[0])
+        .build();
     doCreateRestRequestTest(request);
   }
 
@@ -117,8 +131,8 @@ public class TestRestliServerComponent {
       assertEquals(entry.getValue(), restRequest.getHeaderValues(entry.getKey()));
     }
 
-    assertEquals(new URI(StringUtils.removeStart(request.uri(), StringUtils.removeEnd(CONTEXT, "/"))),
-        restRequest.getURI());
+    assertEquals(new URI(StringUtils.removeStart(request.uri().substring(request.uri().indexOf(CONTEXT)),
+        StringUtils.removeEnd(CONTEXT, "/"))), restRequest.getURI());
 
     String entityString = restRequest.getEntity().asString(CHARSET);
     assertEquals(request.body().asRaw().asBytes().utf8String(), entityString);

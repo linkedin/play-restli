@@ -103,10 +103,19 @@ public class TestRestliStreamServerComponent {
   }
 
   @Test
-  public void testCreateRestRequestStripContextPath() throws Exception {
+  public void testCreateRestRequestStripUri() throws Exception {
     Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
     request.method("PUT");
-    request.uri("/server/foo/bar");
+    request.uri("http://user@localhost:9000" + CONTEXT + "foo/bar");
+    request.headers(new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar"))));
+    doCreateStreamRequestTest(request.build(), EMPTY_DATA);
+  }
+
+  @Test
+  public void testCreateRestRequestStripUriEncoded() throws Exception {
+    Http.RequestBuilder request = createMockRequest(EMPTY_DATA);
+    request.method("PUT");
+    request.uri("http://user@localhost:9000" + CONTEXT + "foo/%28bar%29?test=%28test%29#%28test%29");
     request.headers(new Http.Headers(ImmutableMap.of("foo", ImmutableList.of("bar"))));
     doCreateStreamRequestTest(request.build(), EMPTY_DATA);
   }
@@ -129,8 +138,8 @@ public class TestRestliStreamServerComponent {
       assertEquals(entry.getValue(), restRequest.getHeaderValues(entry.getKey()));
     }
 
-    assertEquals(new URI(StringUtils.removeStart(request.uri(), StringUtils.removeEnd(CONTEXT, "/"))),
-        restRequest.getURI());
+    assertEquals(new URI(StringUtils.removeStart(request.uri().substring(request.uri().indexOf(CONTEXT)),
+        StringUtils.removeEnd(CONTEXT, "/"))), restRequest.getURI());
 
     assertArrayEquals(data, readEntityStream(restRequest.getEntityStream()));
   }
