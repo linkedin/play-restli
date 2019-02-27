@@ -9,9 +9,9 @@ import com.linkedin.r2.message.rest.RestStatus;
 import com.linkedin.r2.transport.http.common.HttpProtocolVersion;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.function.Function;
-import javax.ws.rs.core.UriBuilder;
 import org.apache.commons.lang3.StringUtils;
 import play.Logger;
 import play.api.http.CookiesConfiguration;
@@ -39,7 +39,7 @@ public abstract class BaseRestliServerComponent<T extends Request> {
 
   protected <B extends BaseRequestBuilder<B>> Optional<B> createRequestBuilder(Http.Request request,
       Function<URI, B> createBuilder) throws Exception {
-    return stripUri(new URI(request.uri())).map(uri -> {
+    return stripUri(request.uri(), request.path()).map(uri -> {
       B builder = createBuilder.apply(uri);
       builder.setMethod(request.method());
 
@@ -89,15 +89,18 @@ public abstract class BaseRestliServerComponent<T extends Request> {
   /**
    * Strips scheme and authority parts from URI, also strips Play context from path part, to make URI relative.
    */
-  private Optional<URI> stripUri(URI uri) {
-    if (_playContext.isEmpty()) {
-      return Optional.of(stripSchemeAuthority(UriBuilder.fromUri(uri)));
+  private Optional<URI> stripUri(String uri, String path) throws URISyntaxException {
+    if (!uri.contains(path)) {
+      LOGGER.error(String.format("URI (%s) and path (%s) mismatch", uri, path));
+      return Optional.empty();
     }
-    String path = uri.getRawPath();
-    if (path != null && path.startsWith(_playContext) && (path.length() == _playContext.length()
+    String cleanUri = stripSchemeAuthority(uri, path);
+    if (_playContext.isEmpty()) {
+      return Optional.of(new URI(cleanUri));
+    }
+    if (path.startsWith(_playContext) && (path.length() == _playContext.length()
         || path.charAt(_playContext.length()) == '/')) {
-      return Optional.of(
-          stripSchemeAuthority(UriBuilder.fromUri(uri).replacePath(path.substring(_playContext.length()))));
+      return Optional.of(new URI(cleanUri.substring(_playContext.length())));
     } else {
       LOGGER.error("Play context is not leading the path part of the URI: " + uri);
       return Optional.empty();
@@ -107,7 +110,23 @@ public abstract class BaseRestliServerComponent<T extends Request> {
   /**
    * Strips scheme and authority parts from URI.
    */
-  private URI stripSchemeAuthority(UriBuilder uriBuilder) {
-    return uriBuilder.scheme(null).userInfo(null).host(null).port(-1).build();
+  private String stripSchemeAuthority(String uri, String path) {
+    int startIndex;
+    if (!path.isEmpty()) {
+      // If path exists, then starts with path
+      startIndex = uri.indexOf(path);
+    } else{
+      // If query exists, then starts with query
+      startIndex = uri.indexOf('?');
+      if (startIndex == -1) {
+        // If fragment exists, then starts with fragment
+        startIndex = uri.indexOf('#');
+        if (startIndex == -1) {
+          // If none exists, then return empty
+          return "";
+        }
+      }
+    }
+    return uri.substring(startIndex);
   }
 }

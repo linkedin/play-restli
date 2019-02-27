@@ -23,7 +23,6 @@ lazy val playRestli = (project in file("play-restli"))
       "com.linkedin.pegasus" % "restli-server" % pegasusVersion,
       "com.typesafe.play" %% "play" % playVersion,
       "com.typesafe.play" %% "play-java" % playVersion,
-      "org.glassfish.jersey.core" % "jersey-common" % "2.25.1",
       "org.slf4j" % "slf4j-api" % "1.7.25",
       "junit" % "junit" % "4.12" % Test,
       "com.novocode" % "junit-interface" % "0.11" % Test,
