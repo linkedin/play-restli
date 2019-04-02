@@ -60,7 +60,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
   private val SupportedRestliMethods = Set("GET", "POST", "PUT", "PATCH", "HEAD", "DELETE", "OPTIONS")
   private val useStream: Boolean = configuration.getOptional[Boolean]("restli.useStream").getOrElse(false)
   private val applyFiltersGlobally: Boolean = configuration.getOptional[Boolean]("restli.applyFiltersGlobally").getOrElse(false)
-  private val RestliRequest: TypedKey[Unit] = TypedKey("restliRequest")
+  val RestliRequest: TypedKey[Unit] = TypedKey("restliRequest")
 
   private class RestliRequestStage(handler: Handler) extends Handler.Stage {
     override def apply(requestHeader: RequestHeader): (RequestHeader, Handler) = {
