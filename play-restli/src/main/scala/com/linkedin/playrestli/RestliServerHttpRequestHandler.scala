@@ -60,11 +60,10 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
   private val SupportedRestliMethods = Set("GET", "POST", "PUT", "PATCH", "HEAD", "DELETE", "OPTIONS")
   private val useStream: Boolean = configuration.getOptional[Boolean]("restli.useStream").getOrElse(false)
   private val applyFiltersGlobally: Boolean = configuration.getOptional[Boolean]("restli.applyFiltersGlobally").getOrElse(false)
-  val RestliRequest: TypedKey[Unit] = TypedKey("restliRequest")
 
   private class RestliRequestStage(handler: Handler) extends Handler.Stage {
     override def apply(requestHeader: RequestHeader): (RequestHeader, Handler) = {
-      (requestHeader.addAttr[Unit](RestliRequest, Unit), handler)
+      (requestHeader.addAttr[Unit](RestliServerHttpRequestHandler.RestliRequestAttrKey, Unit), handler)
     }
   }
 
@@ -98,7 +97,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
     )
   }
 
-  def isRestLiRequest(request: RequestHeader): Boolean = request.attrs.contains(RestliRequest)
+  def isRestLiRequest(request: RequestHeader): Boolean = request.attrs.contains(RestliServerHttpRequestHandler.RestliRequestAttrKey)
 
   private def restliRequestHandler: Handler = new RestliRequestStage(
     actionBuilder.async(playBodyParsers.byteString(memoryThresholdBytes)) { scalaRequest =>
@@ -246,4 +245,8 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
       }
     }
   }
+}
+
+object RestliServerHttpRequestHandler {
+  val RestliRequestAttrKey: TypedKey[Unit] = TypedKey("restliRequest")
 }
