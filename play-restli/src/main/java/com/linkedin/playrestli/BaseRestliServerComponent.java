@@ -24,6 +24,7 @@ import play.mvc.Http;
  * Created by qliu on 2/29/16.
  */
 public abstract class BaseRestliServerComponent<T extends Request> {
+  public static final String PLAY_REQUEST_ID_KEY = "PLAY_REQUEST_ID";
   private static final Logger.ALogger LOGGER = Logger.of(BaseRestliServerComponent.class);
   protected final HttpDispatcher _restliDispatcher;
   private final ClientCookieEncoder _cookieEncoder;
@@ -79,6 +80,7 @@ public abstract class BaseRestliServerComponent<T extends Request> {
     } else {
       requestContext.putLocalAttr(R2Constants.IS_SECURE, false);
     }
+    requestContext.putLocalAttr(PLAY_REQUEST_ID_KEY, request.asScala().id());
     return requestContext;
   }
 
