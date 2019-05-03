@@ -1,5 +1,5 @@
 val pegasusVersion = "24.0.2"
-val playVersion = "2.6.20"
+val playVersion = "2.6.22"
 
 val repoUrl = url("https://github.com/linkedin/play-restli")
 
