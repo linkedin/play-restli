@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
+import play.api.http.HttpChunk;
 
 
 /**
@@ -24,12 +25,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  */
 public class RestliStreamTransportCallback
-    extends BaseRestliTransportCallback<StreamResponse, GenericStreamResponse, Source<ByteString, ?>> {
+    extends BaseRestliTransportCallback<StreamResponse, GenericStreamResponse, Source<HttpChunk, ?>> {
   private static class EntityStreamReader implements Reader {
     private final AtomicBoolean _done = new AtomicBoolean(false);
     private ReadHandle _rh;
-    private ConcurrentLinkedQueue<CompletableFuture<Optional<Pair<NotUsed, ByteString>>>>
-        _completableFutures = new ConcurrentLinkedQueue<>();
+    private ConcurrentLinkedQueue<CompletableFuture<Optional<Pair<NotUsed, HttpChunk>>>> _completableFutures =
+        new ConcurrentLinkedQueue<>();
 
     @Override
     public void onInit(ReadHandle rh) {
@@ -38,7 +39,11 @@ public class RestliStreamTransportCallback
 
     @Override
     public void onDataAvailable(com.linkedin.data.ByteString data) {
-      _completableFutures.remove().complete(Optional.of(Pair.create(NotUsed.getInstance(), ByteString.fromArray(data.copyBytes()))));
+      if (!data.isEmpty()) {
+        _completableFutures.remove()
+            .complete(Optional.of(
+                Pair.create(NotUsed.getInstance(), new HttpChunk.Chunk(ByteString.fromArray(data.copyBytes())))));
+      }
     }
 
     @Override
@@ -60,8 +65,8 @@ public class RestliStreamTransportCallback
       _completableFutures.clear();
     }
 
-    public CompletionStage<Optional<Pair<NotUsed, ByteString>>> readNextChunk() {
-      CompletableFuture<Optional<Pair<NotUsed, ByteString>>> completableFuture = new CompletableFuture<>();
+    public CompletionStage<Optional<Pair<NotUsed, HttpChunk>>> readNextChunk() {
+      CompletableFuture<Optional<Pair<NotUsed, HttpChunk>>> completableFuture = new CompletableFuture<>();
       _completableFutures.add(completableFuture);
       if (_done.get()) {
         completableFuture.complete(Optional.empty());
@@ -86,7 +91,7 @@ public class RestliStreamTransportCallback
 
     // Note that, we can't provide an explicit ExecutionContext here. Since the implementation of Source.unfoldAsync
     // reuses the same thread, the ThreadLocal state should be fine.
-    Source<ByteString, NotUsed> body = Source.unfoldAsync(NotUsed.getInstance(), __ -> reader.readNextChunk());
+    Source<HttpChunk, NotUsed> body = Source.unfoldAsync(NotUsed.getInstance(), __ -> reader.readNextChunk());
     return new GenericStreamResponse(status, headers, cookies, body);
   }
 }

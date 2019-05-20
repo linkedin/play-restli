@@ -6,7 +6,6 @@ import akka.stream.ActorMaterializer;
 import akka.stream.ActorMaterializerSettings;
 import akka.stream.Materializer;
 import akka.stream.javadsl.Sink;
-import akka.util.ByteString;
 import com.google.common.collect.ImmutableMap;
 import com.linkedin.playrestli.mock.MockRestResponse;
 import com.linkedin.playrestli.mock.MockStreamResponse;
@@ -20,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
+import play.api.http.HttpChunk;
 
 import static org.junit.Assert.*;
 
@@ -71,9 +71,11 @@ public class TestRestliStreamTransportCallback {
     }
     assertEquals(WIRE_ATTR_VALUE, response.getHeaders().get(WIRE_ATTR_HEADER_KEY));
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    response.getBody().runWith(Sink.foreach((Procedure<ByteString>) data -> {
+    response.getBody().runWith(Sink.foreach((Procedure<HttpChunk>) data -> {
       try {
-        baos.write(data.toArray());
+        if (data instanceof HttpChunk.Chunk) {
+          baos.write(((HttpChunk.Chunk) data).data().toArray());
+        }
       } catch (IOException e) {
         // ignore
       }

@@ -200,7 +200,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
 
         val callback: RestliStreamTransportCallback = new RestliStreamTransportCallback()
         restliStreamServerApi.handleRequest(javaContext.request(), callback)
-        val resultFuture = buildResult[Source[ByteString, _]](callback, (result, body) => result.copy(body = HttpEntity.Streamed(body.asScala, None, result.body.contentType)))
+        val resultFuture = buildResult[Source[HttpChunk, _]](callback, (result, body) => result.copy(body = HttpEntity.Chunked(body.asScala, result.body.contentType)))
 
         Accumulator(sink.mapMaterializedValue(_ => resultFuture))
       }
@@ -217,15 +217,7 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
         cookies ++ cookieHeaderEncoding.fromSetCookieHeader(Option(cookieHeader)).toSeq
       }
       // Setting result header Content-Type no longer takes effect. The type has to be set at the result directly.
-      val resultCopy = result.copy(header = result.header.copy(headers = response.getHeaders.asScala.filter(_._1 != HeaderNames.CONTENT_TYPE).toMap)).withCookies(cookies:_*)
-      // TODO - change this to resultCopy.as once https://github.com/playframework/playframework/issues/8713 is fixed,
-      // where Result.as can take null content-type.
-      val contentTypeOpt = Option(response.getHeaders.get(HeaderNames.CONTENT_TYPE))
-      resultCopy.copy(body = resultCopy.body match {
-        case strict: HttpEntity.Strict => strict.copy(contentType = contentTypeOpt)
-        case streamed: HttpEntity.Streamed => streamed.copy(contentType = contentTypeOpt)
-        case chunked: HttpEntity.Chunked => chunked.copy(contentType = contentTypeOpt)
-      })
+      result.copy(header = result.header.copy(headers = response.getHeaders.asScala.filter(_._1 != HeaderNames.CONTENT_TYPE).toMap)).withCookies(cookies:_*).as(response.getHeaders.get(HeaderNames.CONTENT_TYPE))
     }
   }
 

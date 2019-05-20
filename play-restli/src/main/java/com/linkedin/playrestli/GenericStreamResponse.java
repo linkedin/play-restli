@@ -1,9 +1,9 @@
 package com.linkedin.playrestli;
 
 import akka.stream.javadsl.Source;
-import akka.util.ByteString;
 import java.util.Collection;
 import java.util.Map;
+import play.api.http.HttpChunk;
 
 
 /**
@@ -11,7 +11,7 @@ import java.util.Map;
  *
  * A plain POJO serves as an adapter between StreamResponses and Play SimpleResults.
  */
-public class GenericStreamResponse extends BaseGenericResponse<Source<ByteString, ?>> {
+public class GenericStreamResponse extends BaseGenericResponse<Source<HttpChunk, ?>> {
   public GenericStreamResponse(int status, Map<String, String> headers) {
     super(status, headers);
   }
@@ -20,16 +20,16 @@ public class GenericStreamResponse extends BaseGenericResponse<Source<ByteString
     super(status, headers, cookies);
   }
 
-  public GenericStreamResponse(int status, Map<String, String> headers, Source<ByteString, ?> body) {
+  public GenericStreamResponse(int status, Map<String, String> headers, Source<HttpChunk, ?> body) {
     super(status, headers, body);
   }
 
-  public GenericStreamResponse(int status, Map<String, String> headers, Collection<String> cookies, Source<ByteString, ?> body) {
+  public GenericStreamResponse(int status, Map<String, String> headers, Collection<String> cookies, Source<HttpChunk, ?> body) {
     super(status, headers, cookies, body);
   }
 
   @Override
-  protected Source<ByteString, ?> createEmptyBody() {
+  protected Source<HttpChunk, ?> createEmptyBody() {
     return Source.empty();
   }
 }
