@@ -117,6 +117,8 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
     }
   )
 
+  // TODO: support memoryThresholdBytes
+  // TODO: when client timeouts before finishing streaming, proxy back the error to rest.li callback
   private def restliStreamRequestHandler: Handler = new RestliRequestStage(
     new EssentialAction {
       override def apply(requestHeader: RequestHeader): Accumulator[ByteString, Result] = {

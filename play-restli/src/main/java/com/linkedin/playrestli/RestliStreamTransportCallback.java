@@ -39,10 +39,20 @@ public class RestliStreamTransportCallback
 
     @Override
     public void onDataAvailable(com.linkedin.data.ByteString data) {
+      // When rest.li response body is empty, rest.li still calls this API with empty data. However, HttpChunk cannot
+      // take empty data, and Akka Stream doesn't support skipping elements within Source.
+      // So the purpose of this is to make sure, every request for data will end up with something not empty. And in
+      // reality, rest.li server doesn't send empty chunk otherwise. And for this only case, second request for data is
+      // going to trigger onDone, which is the expected behavior.
+      // TODO: this is based on rest.li streaming implementation detail, thus not an elegant solution. If rest.li server
+      // keeps sending empty data without terminating, here would keep requesting data, could potentially cause infinite
+      // loop. Luckily, the implementation is not the case. But here needs a better solution for sure.
       if (!data.isEmpty()) {
         _completableFutures.remove()
             .complete(Optional.of(
                 Pair.create(NotUsed.getInstance(), new HttpChunk.Chunk(ByteString.fromArray(data.copyBytes())))));
+      } else {
+        _rh.request(1);
       }
     }
 
