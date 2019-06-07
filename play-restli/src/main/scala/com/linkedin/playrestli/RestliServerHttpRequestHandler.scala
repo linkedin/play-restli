@@ -112,7 +112,9 @@ class RestliServerHttpRequestHandler @Inject() (configuration: Configuration,
       })), components.contextComponents)
 
       val callback = new RestliTransportCallback()
-      restliServerApi.handleRequest(javaContext.request(), callback)
+      Threads.withContextClassLoader(env.classLoader) {
+        restliServerApi.handleRequest(javaContext.request(), callback)
+      }
       buildResult[Array[Byte]](callback, (result, body) => result(body))
     }
   )
