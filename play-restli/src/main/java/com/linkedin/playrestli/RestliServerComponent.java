@@ -10,6 +10,7 @@ import javax.inject.Singleton;
 import play.api.http.CookiesConfiguration;
 import play.api.http.HttpConfiguration;
 import play.mvc.Http;
+import play.Logger;
 
 
 /**
@@ -21,6 +22,7 @@ import play.mvc.Http;
  */
 @Singleton
 public final class RestliServerComponent extends BaseRestliServerComponent<RestRequest> implements RestliServerApi {
+  private static final Logger.ALogger LOGGER = Logger.of(RestliServerComponent.class);
 
   @Inject
   public RestliServerComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,
@@ -37,6 +39,11 @@ public final class RestliServerComponent extends BaseRestliServerComponent<RestR
     if (restRequest == null) {
       callback.onResponse(TransportResponseImpl.success(notFound(request.uri())));
     } else {
+      LOGGER.info(request.toString());
+     //  LOGGER.info(request.attrs().get());
+      LOGGER.info(restRequest.toString());
+      LOGGER.info(request.attrs().toString());
+
       _restliDispatcher.handleRequest(restRequest, createRequestContext(request), callback);
     }
   }

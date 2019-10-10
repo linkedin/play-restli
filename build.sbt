@@ -24,6 +24,7 @@ lazy val playRestli = (project in file("play-restli"))
       "com.typesafe.play" %% "play" % playVersion,
       "com.typesafe.play" %% "play-java" % playVersion,
       "org.slf4j" % "slf4j-api" % "1.7.25",
+      "io.netty" % "netty-all" % "4.1.36.Final",
       "junit" % "junit" % "4.12" % Test,
       "com.novocode" % "junit-interface" % "0.11" % Test,
       "com.tngtech.junit.dataprovider" % "junit4-dataprovider" % "2.4" % Test,
