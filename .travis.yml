@@ -1,6 +1,7 @@
 language: scala
 
 jdk: oraclejdk8
+dist: trusty
 
 stages:
   - name: test
