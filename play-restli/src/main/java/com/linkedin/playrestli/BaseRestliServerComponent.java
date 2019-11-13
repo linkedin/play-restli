@@ -8,6 +8,7 @@ import com.linkedin.r2.message.rest.RestResponse;
 import com.linkedin.r2.message.rest.RestStatus;
 import com.linkedin.r2.transport.http.common.HttpProtocolVersion;
 import com.linkedin.r2.transport.http.server.HttpDispatcher;
+import java.lang.NullPointerException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Optional;
@@ -63,12 +64,19 @@ public abstract class BaseRestliServerComponent<T extends Request> {
    * The remote address saved here is the internal address not client IP.
    * For more information, refer {@link R2Constants#REMOTE_ADDR}
    **/
-  protected static RequestContext createRequestContext(final Http.Request request) {
-    final String remoteAddress = request.remoteAddress();
+  protected static RequestContext create" request) {
     final RequestContext requestContext = new RequestContext();
-    if (remoteAddress != null) {
-      requestContext.putLocalAttr(R2Constants.REMOTE_ADDR, remoteAddress);
+    try {
+      final String remoteAddress = request.remoteAddress();
+
+      if (remoteAddress != null) {
+        requestContext.putLocalAttr(R2Constants.REMOTE_ADDR, remoteAddress);
+      }
+    } catch (NullPointerException ex) {
+      // TODO - remove this protection once Play Netty implementation can guard against the NPE 
+      LOGGER.warn("Caught NPE From play-netty-server when accessing remote address in a Netty Channel");
     }
+    
     requestContext.putLocalAttr(R2Constants.HTTP_PROTOCOL_VERSION, HttpProtocolVersion.parse(request.version()));
     if (request.secure()) {
       request.clientCertificateChain().ifPresent(chain -> {
