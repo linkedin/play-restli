@@ -66,29 +66,34 @@ public abstract class BaseRestliServerComponent<T extends Request> {
    **/
   protected static RequestContext createRequestContext(final Http.Request request) {
     final RequestContext requestContext = new RequestContext();
+
+    String remoteAddress = null;
+    String requestSecure = false;
+
     try {
-      final String remoteAddress = request.remoteAddress();
-    
-      if (remoteAddress != null) {
-        requestContext.putLocalAttr(R2Constants.REMOTE_ADDR, remoteAddress);
-      }
+      remoteAddress = request.remoteAddress();
+      requestSecure = request.secure();
     } catch (NullPointerException ex) {
-      // TODO - remove this protection once Play Netty implementation can guard against the NPE 
+      // TODO - remove this protection once Play Netty implementation can guard against the NPE
       LOGGER.warn("Caught NPE From play-netty-server when accessing remote address in a Netty Channel");
     }
-    
+
+    if (remoteAddress != null) {
+      requestContext.putLocalAttr(R2Constants.REMOTE_ADDR, remoteAddress);
+    }
+
     requestContext.putLocalAttr(R2Constants.HTTP_PROTOCOL_VERSION, HttpProtocolVersion.parse(request.version()));
-    if (request.secure()) {
+
+    if (requestSecure) {
       request.clientCertificateChain().ifPresent(chain -> {
         if (!chain.isEmpty()) {
           requestContext.putLocalAttr(R2Constants.CLIENT_CERT, chain.get(0));
         }
       });
-      requestContext.putLocalAttr(R2Constants.IS_SECURE, true);
-    } else {
-      requestContext.putLocalAttr(R2Constants.IS_SECURE, false);
     }
+    requestContext.putLocalAttr(R2Constants.IS_SECURE, requestSecure);
     requestContext.putLocalAttr(PLAY_REQUEST_ID_KEY, request.asScala().id());
+
     return requestContext;
   }
 
