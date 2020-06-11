@@ -58,7 +58,8 @@ public class TestRestliStreamServerComponent {
     expect(config.context()).andReturn(CONTEXT);
     replay(config);
     _httpDispatcher = createMock(HttpDispatcher.class);
-    restliServer = new RestliServerStreamComponent(config, CookiesConfiguration.apply(true), _httpDispatcher);
+    RestliUriResolver restliUriResolver = new DefaultRestliUriResolver(config);
+    restliServer = new RestliServerStreamComponent(CookiesConfiguration.apply(true), _httpDispatcher, restliUriResolver);
   }
 
   @Test
