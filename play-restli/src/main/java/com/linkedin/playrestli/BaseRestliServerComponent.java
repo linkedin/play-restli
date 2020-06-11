@@ -29,19 +29,18 @@ public abstract class BaseRestliServerComponent<T extends Request> {
   private static final Logger.ALogger LOGGER = Logger.of(BaseRestliServerComponent.class);
   protected final HttpDispatcher _restliDispatcher;
   private final ClientCookieEncoder _cookieEncoder;
-  private final String _playContext;
+  private final RestliUriResolver _restliUriResolver;
 
-  protected BaseRestliServerComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,
-      HttpDispatcher restliDispatcher) {
-    // Normalize the context path by removing the trailing slash
-    _playContext = StringUtils.removeEnd(httpConfiguration.context(), "/");
+  protected BaseRestliServerComponent(CookiesConfiguration cookiesConfiguration,
+      HttpDispatcher restliDispatcher, RestliUriResolver restliUriResolver) {
     _cookieEncoder = cookiesConfiguration.clientEncoder();
     _restliDispatcher = restliDispatcher;
+    _restliUriResolver = restliUriResolver;
   }
 
   protected <B extends BaseRequestBuilder<B>> Optional<B> createRequestBuilder(Http.Request request,
       Function<URI, B> createBuilder) throws Exception {
-    return stripUri(request.uri(), request.path()).map(uri -> {
+    return _restliUriResolver.getRestliUri(request.uri(), request.path()).map(uri -> {
       B builder = createBuilder.apply(uri);
       builder.setMethod(request.method());
 
@@ -68,15 +67,15 @@ public abstract class BaseRestliServerComponent<T extends Request> {
     final RequestContext requestContext = new RequestContext();
     try {
       final String remoteAddress = request.remoteAddress();
-    
+
       if (remoteAddress != null) {
         requestContext.putLocalAttr(R2Constants.REMOTE_ADDR, remoteAddress);
       }
     } catch (NullPointerException ex) {
-      // TODO - remove this protection once Play Netty implementation can guard against the NPE 
+      // TODO - remove this protection once Play Netty implementation can guard against the NPE
       LOGGER.warn("Caught NPE From play-netty-server when accessing remote address in a Netty Channel");
     }
-    
+
     requestContext.putLocalAttr(R2Constants.HTTP_PROTOCOL_VERSION, HttpProtocolVersion.parse(request.version()));
     if (request.secure()) {
       request.clientCertificateChain().ifPresent(chain -> {
@@ -94,49 +93,5 @@ public abstract class BaseRestliServerComponent<T extends Request> {
 
   protected static RestResponse notFound(String uri) {
     return RestStatus.responseForStatus(RestStatus.NOT_FOUND, "No resource for URI: " + uri);
-  }
-
-  /**
-   * Strips scheme and authority parts from URI, also strips Play context from path part, to make URI relative.
-   */
-  private Optional<URI> stripUri(String uri, String path) throws URISyntaxException {
-    if (!uri.contains(path)) {
-      LOGGER.error(String.format("URI (%s) and path (%s) mismatch", uri, path));
-      return Optional.empty();
-    }
-    String cleanUri = stripSchemeAuthority(uri, path);
-    if (_playContext.isEmpty()) {
-      return Optional.of(new URI(cleanUri));
-    }
-    if (path.startsWith(_playContext) && (path.length() == _playContext.length()
-        || path.charAt(_playContext.length()) == '/')) {
-      return Optional.of(new URI(cleanUri.substring(_playContext.length())));
-    } else {
-      LOGGER.error("Play context is not leading the path part of the URI: " + uri);
-      return Optional.empty();
-    }
-  }
-
-  /**
-   * Strips scheme and authority parts from URI.
-   */
-  private String stripSchemeAuthority(String uri, String path) {
-    int startIndex;
-    if (!path.isEmpty()) {
-      // If path exists, then starts with path
-      startIndex = uri.indexOf(path);
-    } else{
-      // If query exists, then starts with query
-      startIndex = uri.indexOf('?');
-      if (startIndex == -1) {
-        // If fragment exists, then starts with fragment
-        startIndex = uri.indexOf('#');
-        if (startIndex == -1) {
-          // If none exists, then return empty
-          return "";
-        }
-      }
-    }
-    return uri.substring(startIndex);
   }
 }

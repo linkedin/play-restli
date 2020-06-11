@@ -68,7 +68,8 @@ public class RestliServerModule extends Module {
         dynBinding(ResourceFactory.class, "resourceFactory"),
         dynProvider(Engine.class, EngineProvider.class, "engineProvider"),
         dynProvider(RestLiConfig.class, RestliConfigProvider.class, "configProvider"),
-        dynProvider(HttpDispatcher.class, HttpDispatcherProvider.class, "httpDispatcherProvider")
+        dynProvider(HttpDispatcher.class, HttpDispatcherProvider.class, "httpDispatcherProvider"),
+        bindClass(RestliUriResolver.class).to(DefaultRestliUriResolver.class)
     );
   }
 }
