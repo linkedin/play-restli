@@ -27,9 +27,9 @@ import play.mvc.Http;
 public final class RestliServerStreamComponent extends BaseRestliServerComponent<StreamRequest>
     implements RestliServerStreamApi {
   @Inject
-  public RestliServerStreamComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,
-      HttpDispatcher httpDispatcher) {
-    super(httpConfiguration, cookiesConfiguration, httpDispatcher);
+  public RestliServerStreamComponent(CookiesConfiguration cookiesConfiguration,
+      HttpDispatcher httpDispatcher, RestliUriResolver restliUriResolver) {
+    super(cookiesConfiguration, httpDispatcher, restliUriResolver);
   }
 
   /**

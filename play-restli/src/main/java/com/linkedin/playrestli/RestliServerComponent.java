@@ -23,9 +23,9 @@ import play.mvc.Http;
 public final class RestliServerComponent extends BaseRestliServerComponent<RestRequest> implements RestliServerApi {
 
   @Inject
-  public RestliServerComponent(HttpConfiguration httpConfiguration, CookiesConfiguration cookiesConfiguration,
-      HttpDispatcher httpDispatcher) {
-    super(httpConfiguration, cookiesConfiguration, httpDispatcher);
+  public RestliServerComponent(CookiesConfiguration cookiesConfiguration,
+      HttpDispatcher httpDispatcher, RestliUriResolver restliUriResolver) {
+    super(cookiesConfiguration, httpDispatcher, restliUriResolver);
   }
 
   /**
